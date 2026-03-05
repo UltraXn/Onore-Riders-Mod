@@ -17,7 +17,39 @@ version = mod_version
 group = mod_group_id
 
 repositories {
-    // Add here additional repositories if required by some of the dependencies below.
+    // GeckoLib - confirmed from https://wiki.geckolib.com
+    maven {
+        name = 'GeckoLib'
+        url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+        content { includeGroup("software.bernie.geckolib") }
+    }
+    // Lodestone VFX library - confirmed from maven.blamejared.com
+    maven {
+        name = 'BlameJared'
+        url 'https://maven.blamejared.com'
+        content { includeGroup("team.lodestar.lodestone") }
+    }
+    // Better Combat - Modrinth Maven
+    maven {
+        name = 'Modrinth'
+        url 'https://api.modrinth.com/maven'
+        content { includeGroup("maven.modrinth") }
+    }
+    // Curios API - official maven from docs.illusivesoulworks.com
+    maven {
+        name = 'IllusiveSoulworks'
+        url 'https://maven.theillusivec4.top/'
+        content { includeGroup("top.theillusivec4.curios") }
+    }
+    // PlayerAnimator - for custom player animations
+    maven { url = 'https://maven.kosmx.dev/' }
+    maven { url = 'https://github.com/KosmX/minecraftPlayerAnimator/packages/1518096/maven' }
+    // owo-lib: advanced GUI/widget library
+    maven { url 'https://maven.wispforest.io/releases/' }
+    mavenCentral()
+    google()
+    // JitPack - used for yoga and taffy (LDLib2 layout dependencies)
+    maven { url 'https://jitpack.io' }
 }
 
 base {
@@ -53,6 +85,7 @@ runs {
     client {
         // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
         systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        jvmArgument '-Xmx4G'
     }
 
     server {
@@ -117,6 +150,27 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
+
+    // KRM REvolution Core Visual & API Dependencies
+    // GeckoLib: 3D animations for armor/entities (Blockbench-compatible)
+    implementation "software.bernie.geckolib:geckolib-neoforge-1.21.1:4.8.3"
+    // Lodestone: Advanced VFX particle systems (lightning, beams, screen shake)
+    implementation "team.lodestar.lodestone:lodestone:1.21.1-1.8.3.631"
+
+    // Cloth Config API: Required for Better Combat configuration
+    implementation "maven.modrinth:cloth-config:15.0.140+neoforge"
+    // Better Combat: Enhanced attack animations and weapon swings
+    implementation "maven.modrinth:better-combat:2.3.1+1.21.1-neoforge"
+    // PlayerAnimator: Custom player animations (.json)
+    implementation "dev.kosmx.player-anim:player-animation-lib-forge:2.0.4+1.21.1"
+    
+    // LDLib2: Advanced UI Framework (Local File)
+    implementation files("C:/Users/nacho/Desktop/KRM - REvolution/ldlib2-neoforge-1.21.1-2.2.4.a-all.jar")
+
+    // LDLib2 transitive compile deps: yoga layout engine + taffy layout solver
+    // These are needed so the Java compiler can resolve LayoutStyle's full class signatures.
+    compileOnly 'org.appliedenergistics.yoga:yoga:1.0.0'
+    compileOnly 'dev.vfyjxf:taffy:1.1.3'
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

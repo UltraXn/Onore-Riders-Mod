@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.neroferno.krm_revo.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "refmap": "krm_revo.refmap.json",
+  "client": [
+    "WeaponRegistryMixin",
+    "WeaponRegistryAccessor",
+    "client.ClientWeaponRegistryMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

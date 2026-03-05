@@ -1,0 +1,9 @@
+{
+  "loader": "neoforge:obj",
+  "model": "krm_revo:models/block/mesa_de_trabajo.obj",
+  "flip_v": true,
+  "textures": {
+    "particle": "krm_revo:block/mesa_de_trabajo",
+    "m_mesa_de_trabajo_mat": "krm_revo:block/mesa_de_trabajo"
+  }
+}

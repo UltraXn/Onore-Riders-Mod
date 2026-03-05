@@ -1,0 +1,31 @@
+{
+  "itemGroup.krm_revo": "KRM: REvolution",
+
+  "item.krm_revo.driver_belt": "Driver Belt",
+
+  "krm_revo.curios.belt": "Belt Slot",
+
+  "krm_revo.transform.on":      "Transformed!",
+  "krm_revo.transform.off":     "Transformation deactivated.",
+  "krm_revo.transform.no_belt": "Equip the Driver Belt first!",
+  "krm_revo.belt.already_equipped": "The Driver Belt is already equipped!",
+
+  "item.krm_revo.researcher_desk":  "Researcher Desk",
+  "block.krm_revo.researcher_desk": "Researcher Desk",
+
+  "item.krm_revo.mesa_de_trabajo":  "KRM Workbench",
+  "block.krm_revo.mesa_de_trabajo": "KRM Workbench",
+
+  "key.categories.krm_revo": "KRM: REvolution",
+  "key.krm_revo.transform":   "Transform",
+  "key.krm_revo.ability":     "Use Ability",
+  "key.krm_revo.skill_tree":  "Open Belt Menu",
+
+  "gui.krm_revo.skill_tree.title":       "Driver Belt",
+  "gui.krm_revo.skill_tree.close":       "Close",
+  "gui.krm_revo.skill_tree.equip":       "Equip Belt",
+  "gui.krm_revo.skill_tree.unequip":     "Remove Belt",
+  "gui.krm_revo.skill_tree.equip.tip":   "Click to equip the Driver Belt from your inventory.",
+  "gui.krm_revo.skill_tree.unequip.tip": "Click to remove the Driver Belt (returned to inventory).",
+  "gui.krm_revo.skill_tree.equip.none":  "You need a Driver Belt in your inventory."
+}

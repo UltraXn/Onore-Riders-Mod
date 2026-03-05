@@ -1,0 +1,4 @@
+# Made in Blockbench 5.0.7
+newmtl m_mesa_de_trabajo_mat
+map_Kd texture.png
+newmtl none
