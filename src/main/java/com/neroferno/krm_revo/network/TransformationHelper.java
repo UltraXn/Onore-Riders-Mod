@@ -13,7 +13,7 @@ import net.minecraft.world.entity.player.Player;
  * State is stored in the player's persistent data (NBT tag) under the key
  * "krm_revo:transformed". This is accessible from both client and server.
  */
-@SuppressWarnings({"null", "deprecation"})
+@SuppressWarnings("null")
 public class TransformationHelper {
 
     private static final String TAG_TRANSFORMED  = "krm_revo:transformed";

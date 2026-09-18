@@ -1,6 +1,5 @@
 package com.neroferno.krm_revo.mixin.client;
 
-import com.neroferno.krm_revo.KRMRevoMod;
 import com.neroferno.krm_revo.attachment.ModAttachments;
 import com.neroferno.krm_revo.mixin.WeaponRegistryAccessor;
 import net.bettercombat.api.AttributesContainer;
@@ -37,8 +36,8 @@ public class ClientWeaponRegistryMixin {
         if (!itemStack.isEmpty()) return;
 
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.player == null) return;
         Player player = mc.player;
+        if (player == null) return;
 
         // Check belt
         boolean hasBelt = false;

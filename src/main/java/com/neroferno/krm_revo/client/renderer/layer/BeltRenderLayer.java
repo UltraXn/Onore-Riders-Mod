@@ -15,7 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import com.neroferno.krm_revo.client.renderer.BeltArmorRenderer;
 
-@SuppressWarnings({"null", "removal", "deprecation"})
+@SuppressWarnings({"null", "removal"})
 public class BeltRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
 
     private final BeltArmorRenderer beltRenderer;
@@ -47,14 +47,24 @@ public class BeltRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
 
         // Sync player body rotations to the GeckoLib renderer
         PlayerModel<AbstractClientPlayer> model = this.getParentModel();
+        boolean transformed = TransformationHelper.isTransformed(player);
+        if (transformed) {
+            model.setAllVisible(true);
+        }
 
         // Let GeckoLib handle the rest of the rendering natively
         this.beltRenderer.prepForRender(player, beltStack, EquipmentSlot.LEGS, model);
+
+        if (transformed) {
+            model.setAllVisible(false);
+        }
+        
         net.minecraft.client.renderer.RenderType renderType = this.beltRenderer.getRenderType(
                 (com.neroferno.krm_revo.item.BeltItem) beltStack.getItem(),
                 this.beltRenderer.getTextureLocation((com.neroferno.krm_revo.item.BeltItem) beltStack.getItem()),
                 buffer, partialTick);
         com.mojang.blaze3d.vertex.VertexConsumer vertexConsumer = buffer.getBuffer(renderType);
+
 
         this.beltRenderer.renderToBuffer(poseStack, vertexConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
 

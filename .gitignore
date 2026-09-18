@@ -24,3 +24,15 @@ runs
 run-data
 
 repo
+
+# IDE & temporary scratch files
+.vscode
+*.py
+build_error*.txt
+builder_*.txt
+build_out.txt
+*.json.rej
+*.rej
+*.log
+modrinth_versions.json
+versions.json

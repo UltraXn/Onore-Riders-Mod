@@ -1,6 +1,6 @@
 {
   "loader": "neoforge:obj",
-  "model": "krm_revo:models/block/researcher_desk.obj",
+  "model": "krm_revo:block/researcher_desk.obj",
   "flip_v": true,
   "textures": {
     "particle": "krm_revo:block/researcher_desk",

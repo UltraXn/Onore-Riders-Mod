@@ -6,7 +6,7 @@ import net.neoforged.neoforge.client.settings.KeyConflictContext;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * All keybindings for KRM: REvolution.
+ * All keybindings for Onore Rider.
  * Registered in KRMRevoModClient via the RegisterKeyMappingsEvent.
  */
 public class ModKeybindings {

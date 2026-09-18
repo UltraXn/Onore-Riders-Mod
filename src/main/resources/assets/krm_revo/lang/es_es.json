@@ -1,5 +1,5 @@
 {
-  "itemGroup.krm_revo": "KRM: REvolution",
+  "itemGroup.krm_revo": "Onore Rider",
 
   "item.krm_revo.driver_belt": "Cinturón Driver",
 
@@ -7,13 +7,28 @@
 
   "krm_revo.transform.on":  "¡Transformado!",
   "krm_revo.transform.off": "Transformación desactivada.",
-  "krm_revo.transform.cooldown": "¡Tranformación en enfriamiento!",
+  "krm_revo.transform.cooldown": "¡Transformación en enfriamiento!",
   "krm_revo.transform.no_belt": "¡Necesitas un Cinturón Driver equipado para transformarte!",
   "krm_revo.belt.already_equipped": "¡El Cinturón Driver ya está equipado!",
 
-  "key.categories.krm_revo": "KRM: REvolution",
-  "key.krm_revo.transform": "Transformarse",
+  "item.krm_revo.researcher_desk":  "Escritorio de Investigador",
+  "block.krm_revo.researcher_desk": "Escritorio de Investigador",
 
-  "item.krm_revo.mesa_de_trabajo":  "Mesa de Trabajo KRM",
-  "block.krm_revo.mesa_de_trabajo": "Mesa de Trabajo KRM"
+  "item.krm_revo.mesa_de_trabajo":  "Mesa de Trabajo Rider",
+  "block.krm_revo.mesa_de_trabajo": "Mesa de Trabajo Rider",
+
+  "key.categories.krm_revo": "Onore Rider",
+  "key.krm_revo.transform": "Transformarse",
+  "key.krm_revo.ability": "Usar Riderkick",
+  "key.krm_revo.skill_tree": "Abrir Menú de Cinturón",
+
+  "gui.krm_revo.skill_tree.title":       "Cinturón Driver",
+  "gui.krm_revo.skill_tree.close":       "Cerrar",
+  "gui.krm_revo.skill_tree.equip":       "Equipar Cinturón",
+  "gui.krm_revo.skill_tree.unequip":     "Quitar Cinturón",
+  "gui.krm_revo.skill_tree.equip.tip":   "Haz clic para equipar el Cinturón Driver desde tu inventario.",
+  "gui.krm_revo.skill_tree.unequip.tip": "Haz clic para quitarte el Cinturón Driver (se devuelve al inventario).",
+  "gui.krm_revo.skill_tree.equip.none":  "Necesitas un Cinturón Driver en tu inventario.",
+  "chat.krm_revo.cooldown_actionbar": "cooldown %ss",
+  "chat.krm_revo.no_target_lock": "¡Riderkick requiere un objetivo en la mira (máx. 20 bloques)!"
 }

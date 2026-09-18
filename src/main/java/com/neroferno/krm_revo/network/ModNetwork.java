@@ -2,9 +2,10 @@ package com.neroferno.krm_revo.network;
 
 import com.neroferno.krm_revo.KRMRevoMod;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Registers all network packets and their server-side handlers.
@@ -64,11 +65,39 @@ public class ModNetwork {
                 SyncRiderStatePacket.STREAM_CODEC,
                 SyncRiderStatePacket::handle
         );
+
+        // Client -> Server: Unequip the Driver Belt from Rider Inventory
+        registrar.playToServer(
+                UnequipBeltPacket.TYPE,
+                UnequipBeltPacket.STREAM_CODEC,
+                ModNetwork::handleUnequipPacket
+        );
+
+        // Server -> Client: Sync player velocity (anti-rubberbanding dash)
+        registrar.playToClient(
+                SyncVelocityPacket.TYPE,
+                SyncVelocityPacket.STREAM_CODEC,
+                SyncVelocityPacket::handle
+        );
+
+        // Server -> Client: Sync target entity and coordinates for stasis freeze
+        registrar.playToClient(
+                SyncRiderKickTargetPacket.TYPE,
+                SyncRiderKickTargetPacket.STREAM_CODEC,
+                SyncRiderKickTargetPacket::handle
+        );
+
+        // Client -> Server: Select transformation form
+        registrar.playToServer(
+                SelectFormPacket.TYPE,
+                SelectFormPacket.STREAM_CODEC,
+                ModNetwork::handleSelectFormPacket
+        );
     }
 
     /**
      * Server-side handler for the K-key transformation request.
-     * Uses the custom NBT belt-equipped flag instead of Curios.
+     * Uses the custom NBT belt-equipped flag.
      */
     private static void handleTransformPacket(TransformPacket packet,
                                                net.neoforged.neoforge.network.handling.IPayloadContext context) {
@@ -96,11 +125,20 @@ public class ModNetwork {
 
                 TransformationHelper.toggleTransformation(player);
 
+                boolean isTransformed = TransformationHelper.isTransformed(player);
+                boolean hasBelt = TransformationHelper.isBeltEquipped(player);
+                int riderKickState = player.getPersistentData().getInt("RiderKickState");
+                int form = player.getPersistentData().getInt("krm_revo:form");
+
+                // Sync the state immediately to all clients to avoid 10-tick lag
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                        new SyncRiderStatePacket(player.getId(), isTransformed, hasBelt, riderKickState, form));
+
                 // Broadcast VFX packet to all nearby players
                 net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                         new TransformVFXPacket(
                                 player.getX(), player.getY(), player.getZ(),
-                                TransformationHelper.isTransformed(player)
+                                isTransformed
                         ));
 
                 // Broadcast animation packet
@@ -135,5 +173,68 @@ public class ModNetwork {
     private static void handleOpenMenuPacket(OpenRiderMenuPacket packet,
                                                net.neoforged.neoforge.network.handling.IPayloadContext context) {
         packet.handle(context);
+    }
+
+    /**
+     * Server-side handler for unequipping the belt from the Rider Inventory.
+     */
+    private static void handleUnequipPacket(UnequipBeltPacket packet,
+                                             net.neoforged.neoforge.network.handling.IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (!(context.player() instanceof ServerPlayer player)) return;
+            if (!player.isAlive()) return;
+
+            if (player.hasData(com.neroferno.krm_revo.attachment.ModAttachments.RIDER_INVENTORY)) {
+                net.neoforged.neoforge.items.ItemStackHandler inv = player.getData(com.neroferno.krm_revo.attachment.ModAttachments.RIDER_INVENTORY);
+                ItemStack beltStack = inv.getStackInSlot(0);
+
+                if (!beltStack.isEmpty()) {
+                    // Detransform if transformed
+                    if (TransformationHelper.isTransformed(player)) {
+                        TransformationHelper.setTransformed(player, false);
+                        // Broadcast VFX packet to detransform
+                        net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                                new TransformVFXPacket(player.getX(), player.getY(), player.getZ(), false));
+                    }
+
+                    ItemStack toAdd = beltStack.copy();
+                    inv.setStackInSlot(0, ItemStack.EMPTY);
+
+                    // Try to put it back in player's inventory, drop it on the ground if full
+                    if (!player.getInventory().add(toAdd)) {
+                        player.drop(toAdd, false);
+                    }
+
+                    // Sync the new empty state to the client and all tracking players
+                    net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                            new SyncRiderStatePacket(player.getId(), false, false, 0, 0));
+                    
+                    // Close the current screen (container)
+                    player.closeContainer();
+                }
+            }
+        });
+    }
+
+    /**
+     * Server-side handler for form selection.
+     */
+    private static void handleSelectFormPacket(SelectFormPacket packet,
+                                               net.neoforged.neoforge.network.handling.IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (!(context.player() instanceof ServerPlayer player)) return;
+            if (!player.isAlive()) return;
+
+            // Save the selected form ID
+            player.getPersistentData().putInt("krm_revo:form", packet.formId());
+
+            // Sync the updated state to tracking clients and self
+            boolean isTransformed = TransformationHelper.isTransformed(player);
+            boolean hasBelt = TransformationHelper.isBeltEquipped(player);
+            int riderKickState = player.getPersistentData().getInt("RiderKickState");
+
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                    new SyncRiderStatePacket(player.getId(), isTransformed, hasBelt, riderKickState, packet.formId()));
+        });
     }
 }

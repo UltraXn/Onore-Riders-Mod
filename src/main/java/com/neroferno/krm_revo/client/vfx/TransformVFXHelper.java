@@ -1,25 +1,17 @@
 package com.neroferno.krm_revo.client.vfx;
 
-import com.neroferno.krm_revo.KRMRevoMod;
 import com.neroferno.krm_revo.particle.ModParticles;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLLoader;
-import team.lodestar.lodestone.registry.common.particle.LodestoneParticleTypes;
-import team.lodestar.lodestone.systems.easing.Easing;
-import team.lodestar.lodestone.systems.particle.builder.WorldParticleBuilder;
-import team.lodestar.lodestone.systems.particle.data.GenericParticleData;
-import team.lodestar.lodestone.systems.particle.data.color.ColorParticleData;
 
-import java.awt.Color;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Central dispatcher for all KRM: REvolution visual effects.
+ * Central dispatcher for all Onore Rider visual effects.
  *
  * All VFX methods are client-side only. Server-side callers must dispatch
  * via the ClientboundCustomPayload packet system.
@@ -65,8 +57,6 @@ public class TransformVFXHelper {
         ParticleEngine engine = Minecraft.getInstance().particleEngine;
         for (int i = 0; i < count; i++) {
             double angle = (Math.PI * 2.0 / count) * i;
-            double x = center.x + Math.cos(angle) * radius;
-            double z = center.z + Math.sin(angle) * radius;
             double vx = Math.cos(angle) * 0.3;
             double vy = 0.2 + ThreadLocalRandom.current().nextDouble() * 0.2;
             double vz = Math.sin(angle) * 0.3;

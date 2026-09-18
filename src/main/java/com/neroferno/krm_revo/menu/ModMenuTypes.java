@@ -1,8 +1,7 @@
 package com.neroferno.krm_revo.menu;
 
-import com.lowdragmc.lowdraglib2.gui.holder.ModularUIContainerMenu;
 import com.neroferno.krm_revo.KRMRevoMod;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -10,7 +9,7 @@ import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 
 public class ModMenuTypes {
     public static final DeferredRegister<MenuType<?>> MENUS =
-            DeferredRegister.create(BuiltInRegistries.MENU, KRMRevoMod.MODID);
+            DeferredRegister.create(Registries.MENU, KRMRevoMod.MODID);
 
     /** 
      * RiderMenu extends ModularUIContainerMenu, so the factory signature must 

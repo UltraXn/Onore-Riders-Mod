@@ -1,7 +1,7 @@
 package com.neroferno.krm_revo.event;
 
 import com.neroferno.krm_revo.KRMRevoMod;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.neoforged.bus.api.IEventBus;
@@ -14,7 +14,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 @SuppressWarnings("null")
 public class ModSounds {
     public static final DeferredRegister<SoundEvent> SOUND_EVENTS =
-            DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, KRMRevoMod.MODID);
+            DeferredRegister.create(Registries.SOUND_EVENT, KRMRevoMod.MODID);
 
     public static final DeferredHolder<SoundEvent, SoundEvent> TRANSFORM =
             registerSoundEvent("transform");

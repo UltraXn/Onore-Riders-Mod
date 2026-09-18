@@ -36,11 +36,20 @@ public class SuitRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
         }
 
         // Prepare the GeckoLib renderer to sync rotations with the vanilla player model skeleton
-        this.renderer.prepForRender(player, dummySuitStack, EquipmentSlot.CHEST, this.getParentModel());
+        PlayerModel<AbstractClientPlayer> parentModel = this.getParentModel();
+        parentModel.setAllVisible(true);
+        this.renderer.prepForRender(player, dummySuitStack, EquipmentSlot.CHEST, parentModel);
+        parentModel.setAllVisible(false);
         
+        int form = player.getPersistentData().getInt("krm_revo:form");
+        ResourceLocation textureRes = form == 1 
+            ? ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/growing_suit.png") 
+            : ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/kuuga_suit.png");
+
         RenderType renderType = this.renderer.getRenderType((SuitVisualItem) dummySuitStack.getItem(), 
-                                                            ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/kuuga_suit.png"), 
+                                                            textureRes, 
                                                             bufferSource, partialTick);
+
         VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType);
 
         // Render the model immediately

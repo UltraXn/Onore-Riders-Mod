@@ -1,11 +1,11 @@
 {
   "format_version": "1.12.0",
   "animations": {
-    "animation.krm_revo.kick": {
+    "kick": {
       "loop": false,
       "animation_length": 1.0,
       "bones": {
-        "body": {
+        "torso": {
           "rotation": {
             "0.0": [0, 0, 0],
             "0.2": [10, 0, 0],

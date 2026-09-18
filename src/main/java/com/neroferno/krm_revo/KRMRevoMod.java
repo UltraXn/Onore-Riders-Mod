@@ -45,7 +45,7 @@ public class KRMRevoMod {
                     }).build());
 
     public KRMRevoMod(IEventBus modEventBus, ModContainer modContainer) {
-        LOGGER.info("KRM: REvolution — Initializing...");
+        LOGGER.info("Onore Rider — Initializing...");
 
         // Register item and creative tab registries
         ModItems.ITEMS.register(modEventBus);
@@ -66,7 +66,7 @@ public class KRMRevoMod {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        LOGGER.info("KRM: REvolution — Common Setup complete.");
+        LOGGER.info("Onore Rider — Common Setup complete.");
 
     }
 }

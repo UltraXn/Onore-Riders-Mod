@@ -4,10 +4,17 @@
   "package": "com.neroferno.krm_revo.mixin",
   "compatibilityLevel": "JAVA_21",
   "refmap": "krm_revo.refmap.json",
-  "client": [
+  "mixins": [
     "WeaponRegistryMixin",
-    "WeaponRegistryAccessor",
-    "client.ClientWeaponRegistryMixin"
+    "WeaponRegistryAccessor"
+  ],
+  "client": [
+    "client.ClientWeaponRegistryMixin",
+    "client.HumanoidArmorLayerMixin",
+    "client.CapeLayerMixin",
+    "client.ElytraLayerMixin",
+    "client.CustomHeadLayerMixin",
+    "client.PlayerRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

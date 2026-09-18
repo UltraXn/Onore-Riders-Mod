@@ -1,7 +1,6 @@
 package com.neroferno.krm_revo.client.particle;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.neroferno.krm_revo.particle.ModParticles;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleProvider;
@@ -11,6 +10,7 @@ import net.minecraft.client.particle.TextureSheetParticle;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -82,7 +82,7 @@ public class LinearSparkParticle extends TextureSheetParticle {
         // Spawn random companion flash particles, exactly as in particle-interactions 
         if (
             this.random.nextFloat() > percentageTimeUntilDeath + 0.8f ||
-            (this.random.nextFloat() < 0.01f && (this.xd*this.xd + this.yd*this.yd + this.zd*this.zd > 0.001))
+            (this.random.nextFloat() * this.random.nextFloat() + this.xd*this.xd + this.yd*this.yd + this.zd*this.zd > 0.001)
         ) {
             this.level.addParticle(com.neroferno.krm_revo.particle.ModParticles.SPARK_FLASH.get(), this.prevPrevX, this.prevPrevY, this.prevPrevZ, 0, 0, 0);
         }
@@ -114,7 +114,7 @@ public class LinearSparkParticle extends TextureSheetParticle {
     }
 
     @Override
-    public void render(VertexConsumer buffer, Camera camera, float partialTicks) {
+    public void render(@NotNull VertexConsumer buffer, @NotNull Camera camera, float partialTicks) {
         Vec3 cameraPos = camera.getPosition();
 
         float x = (float) (Mth.lerp((double) partialTicks, this.xo, this.x) - cameraPos.x());
@@ -192,7 +192,7 @@ public class LinearSparkParticle extends TextureSheetParticle {
         }
 
         @Override
-        public net.minecraft.client.particle.Particle createParticle(SimpleParticleType type, ClientLevel level,
+        public net.minecraft.client.particle.Particle createParticle(@NotNull SimpleParticleType type, @NotNull ClientLevel level,
                                                                      double x, double y, double z,
                                                                      double xSpeed, double ySpeed, double zSpeed) {
             return new LinearSparkParticle(level, x, y, z, xSpeed, ySpeed, zSpeed, this.sprites);

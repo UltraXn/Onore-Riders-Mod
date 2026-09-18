@@ -7,7 +7,7 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
- * Central registry for all KRM: REvolution items.
+ * Central registry for all Onore Rider items.
  * Register ModItems.ITEMS to the mod event bus in KRMRevoMod.
  */
 @SuppressWarnings("null")
@@ -18,7 +18,8 @@ public class ModItems {
     // â”€â”€â”€ Transformation Items â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /**
-     * The core transformation item. When equipped in the Curios 'belt' slot,
+     * Server-side handler for the K-key transformation request.
+     * Uses the custom NBT belt-equipped flag.
      * it grants access to the transformation UI (K key) and combat bonuses.
      */
     public static final DeferredItem<BeltItem> DRIVER_BELT =

@@ -5,30 +5,57 @@
     "attacks": [
       {
         "hitbox": "FORWARD_BOX",
-        "damage_multiplier": 1.0,
-        "upswing": 0.4,
+        "damage_multiplier": 0.8,
+        "upswing": 0.15,
         "animation": "bettercombat:one_handed_punch",
-        "swing_sound": {
-          "id": "bettercombat:fist_punch"
-        }
-      },
-      {
-        "hitbox": "FORWARD_BOX",
-        "damage_multiplier": 1.0,
-        "upswing": 0.4,
-        "animation": "bettercombat:one_handed_punch",
-        "swing_sound": {
-          "id": "bettercombat:fist_punch"
-        }
-      },
-      {
-        "hitbox": "FORWARD_BOX",
-        "damage_multiplier": 1.5,
-        "upswing": 0.5,
-        "animation": "bettercombat:one_handed_stab",
         "swing_sound": {
           "id": "bettercombat:fist_punch",
-          "pitch": 0.8
+          "volume": 0.8,
+          "pitch": 1.1
+        }
+      },
+      {
+        "hitbox": "FORWARD_BOX",
+        "damage_multiplier": 0.8,
+        "upswing": 0.15,
+        "animation": "bettercombat:one_handed_punch",
+        "swing_sound": {
+          "id": "bettercombat:fist_punch",
+          "volume": 0.8,
+          "pitch": 1.2
+        }
+      },
+      {
+        "hitbox": "FORWARD_BOX",
+        "damage_multiplier": 1.2,
+        "upswing": 0.2,
+        "animation": "krm_revo:kick_left",
+        "swing_sound": {
+          "id": "bettercombat:fist_punch",
+          "volume": 1.0,
+          "pitch": 0.95
+        }
+      },
+      {
+        "hitbox": "FORWARD_BOX",
+        "damage_multiplier": 1.4,
+        "upswing": 0.2,
+        "animation": "krm_revo:kick",
+        "swing_sound": {
+          "id": "bettercombat:fist_punch",
+          "volume": 1.1,
+          "pitch": 0.9
+        }
+      },
+      {
+        "hitbox": "FORWARD_BOX",
+        "damage_multiplier": 2.2,
+        "upswing": 0.3,
+        "animation": "krm_revo:spin_kick",
+        "swing_sound": {
+          "id": "bettercombat:fist_punch",
+          "volume": 1.4,
+          "pitch": 0.7
         }
       }
     ]

@@ -43,22 +43,28 @@ public class AnimationHandler {
         // Find the animation in the registry
         ResourceLocation animLoc = ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, animName);
         IPlayable playable = PlayerAnimationRegistry.getAnimation(animLoc);
+        
+        if (playable == null) {
+            // Fallback for animations named using Bedrock standard "animation.mod_id.anim_name"
+            animLoc = ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "animation." + KRMRevoMod.MODID + "." + animName);
+            playable = PlayerAnimationRegistry.getAnimation(animLoc);
+        }
 
         if (playable != null) {
             IAnimation animation = playable.playAnimation();
 
-            // We use a ModifierLayer to easily add/replace animations
-            // In a production mod, you'd likely cache this layer per player
-            ModifierLayer<IAnimation> layer = new ModifierLayer<>();
-            layer.setAnimation(animation);
-
-            // Add to stack with a specific priority (priority goes first in some versions)
-            // Priority 5 allows it to override default movements but be overridden by higher-level effects
-            stack.addAnimLayer(5, layer);
-
-            KRMRevoMod.LOGGER.debug("Playing animation {} for player {}", animName, player.getName().getString());
+            ModifierLayer<IAnimation> layer = com.neroferno.krm_revo.KRMRevoModClient.getAnimationLayer(player);
+            if (layer != null) {
+                layer.setAnimation(animation);
+                KRMRevoMod.LOGGER.debug("Playing cached animation {} on priority 1500 layer for player {}", animName, player.getName().getString());
+            } else {
+                ModifierLayer<IAnimation> newLayer = new ModifierLayer<>();
+                newLayer.setAnimation(animation);
+                stack.addAnimLayer(1500, newLayer);
+                KRMRevoMod.LOGGER.warn("Animation layer not cached for player {}, created fallback layer.", player.getName().getString());
+            }
         } else {
-            KRMRevoMod.LOGGER.warn("Animation {} not found in registry!", animLoc);
+            KRMRevoMod.LOGGER.warn("Animation {} not found in registry (also tried fully qualified keys)!", animName);
         }
     }
 }

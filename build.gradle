@@ -1,7 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'net.neoforged.gradle.userdev' version '7.1.20'
+    id 'net.neoforged.gradle.userdev' version '7.1.39'
 }
 
 tasks.named('wrapper', Wrapper).configure {
@@ -23,33 +23,16 @@ repositories {
         url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
         content { includeGroup("software.bernie.geckolib") }
     }
-    // Lodestone VFX library - confirmed from maven.blamejared.com
-    maven {
-        name = 'BlameJared'
-        url 'https://maven.blamejared.com'
-        content { includeGroup("team.lodestar.lodestone") }
-    }
     // Better Combat - Modrinth Maven
     maven {
         name = 'Modrinth'
         url 'https://api.modrinth.com/maven'
         content { includeGroup("maven.modrinth") }
     }
-    // Curios API - official maven from docs.illusivesoulworks.com
-    maven {
-        name = 'IllusiveSoulworks'
-        url 'https://maven.theillusivec4.top/'
-        content { includeGroup("top.theillusivec4.curios") }
-    }
     // PlayerAnimator - for custom player animations
     maven { url = 'https://maven.kosmx.dev/' }
-    maven { url = 'https://github.com/KosmX/minecraftPlayerAnimator/packages/1518096/maven' }
-    // owo-lib: advanced GUI/widget library
-    maven { url 'https://maven.wispforest.io/releases/' }
     mavenCentral()
     google()
-    // JitPack - used for yoga and taffy (LDLib2 layout dependencies)
-    maven { url 'https://jitpack.io' }
 }
 
 base {
@@ -121,41 +104,12 @@ configurations {
 }
 
 dependencies {
-    // Specify the version of Minecraft to use.
-    // Depending on the plugin applied there are several options. We will assume you applied the userdev plugin as shown above.
-    // The group for userdev is net.neoforged, the module name is neoforge, and the version is the same as the neoforge version.
-    // You can however also use the vanilla plugin (net.neoforged.gradle.vanilla) to use a version of Minecraft without the neoforge loader.
-    // And its provides the option to then use net.minecraft as the group, and one of; client, server or joined as the module name, plus the game version as version.
-    // For all intends and purposes: You can treat this dependency as if it is a normal library you would use.
+    // Specify the version of Minecraft and NeoForge to use.
     implementation "net.neoforged:neoforge:${neo_version}"
 
-    // Example optional mod dependency with JEI
-    // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
-    // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
-    // compileOnly "mezz.jei:jei-${mc_version}-neoforge-api:${jei_version}"
-    // We add the full version to localRuntime, not runtimeOnly, so that we do not publish a dependency on it
-    // localRuntime "mezz.jei:jei-${mc_version}-neoforge:${jei_version}"
-
-    // Example mod dependency using a mod jar from ./libs with a flat dir repository
-    // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar
-    // The group id is ignored when searching -- in this case, it is "blank"
-    // implementation "blank:coolmod-${mc_version}:${coolmod_version}"
-
-    // Example mod dependency using a file as dependency
-    // implementation files("libs/coolmod-${mc_version}-${coolmod_version}.jar")
-
-    // Example project dependency using a sister or child project:
-    // implementation project(":myproject")
-
-    // For more info:
-    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
-    // http://www.gradle.org/docs/current/userguide/dependency_management.html
-
-    // KRM REvolution Core Visual & API Dependencies
+    // Onore Rider Core Visual & API Dependencies
     // GeckoLib: 3D animations for armor/entities (Blockbench-compatible)
     implementation "software.bernie.geckolib:geckolib-neoforge-1.21.1:4.8.3"
-    // Lodestone: Advanced VFX particle systems (lightning, beams, screen shake)
-    implementation "team.lodestar.lodestone:lodestone:1.21.1-1.8.3.631"
 
     // Cloth Config API: Required for Better Combat configuration
     implementation "maven.modrinth:cloth-config:15.0.140+neoforge"
@@ -163,14 +117,6 @@ dependencies {
     implementation "maven.modrinth:better-combat:2.3.1+1.21.1-neoforge"
     // PlayerAnimator: Custom player animations (.json)
     implementation "dev.kosmx.player-anim:player-animation-lib-forge:2.0.4+1.21.1"
-    
-    // LDLib2: Advanced UI Framework (Local File)
-    implementation files("C:/Users/nacho/Desktop/KRM - REvolution/ldlib2-neoforge-1.21.1-2.2.4.a-all.jar")
-
-    // LDLib2 transitive compile deps: yoga layout engine + taffy layout solver
-    // These are needed so the Java compiler can resolve LayoutStyle's full class signatures.
-    compileOnly 'org.appliedenergistics.yoga:yoga:1.0.0'
-    compileOnly 'dev.vfyjxf:taffy:1.1.3'
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

@@ -1,7 +1,5 @@
 package com.neroferno.krm_revo.client.vfx;
 
-import net.minecraft.client.CameraType;
-import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;

@@ -6,8 +6,8 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
 import net.neoforged.neoforge.items.wrapper.PlayerArmorInvWrapper;
@@ -33,18 +33,13 @@ public class RiderMenu extends AbstractContainerMenu {
         PlayerArmorInvWrapper armorInv = new PlayerArmorInvWrapper(inv);
         PlayerOffhandInvWrapper offhandInv = new PlayerOffhandInvWrapper(inv);
 
-        // Armor slots (helmet, chest, legs, boots)
-        // Matching RiderScreen coords for slots: 10, 20 / 38 / 56 / 74
-        this.addSlot(new SlotItemHandler(armorInv, 3, 10, 20)); // Helmet
-        this.addSlot(new SlotItemHandler(armorInv, 2, 10, 38)); // Chestplate
-        this.addSlot(new SlotItemHandler(armorInv, 1, 10, 56)); // Leggings
-        this.addSlot(new SlotItemHandler(armorInv, 0, 10, 74)); // Boots
-
-        // Offhand
-        this.addSlot(new SlotItemHandler(offhandInv, 0, 10, 92)); 
-
-        // Driver Belt
-        this.addSlot(new SlotItemHandler(riderInv, 0, 10, 115) {
+        // 2x3 slot grid in the bottom-left compartment (x=15..79, y=120..191) of marco.png
+        this.addSlot(new SlotItemHandler(armorInv, 3, 22, 125)); // Helmet
+        this.addSlot(new SlotItemHandler(armorInv, 2, 22, 145)); // Chestplate
+        this.addSlot(new SlotItemHandler(armorInv, 1, 22, 165)); // Leggings
+        this.addSlot(new SlotItemHandler(armorInv, 0, 52, 125)); // Boots
+        this.addSlot(new SlotItemHandler(offhandInv, 0, 52, 145)); // Offhand
+        this.addSlot(new SlotItemHandler(riderInv, 0, 52, 165) {  // Driver Belt
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.is(ModItems.DRIVER_BELT.get());
@@ -56,12 +51,12 @@ public class RiderMenu extends AbstractContainerMenu {
     }
 
     @Override
-    public ItemStack quickMoveStack(Player player, int index) {
+    public @NotNull ItemStack quickMoveStack(@NotNull Player player, int index) {
         return ItemStack.EMPTY;
     }
 
     @Override
-    public boolean stillValid(Player player) {
+    public boolean stillValid(@NotNull Player player) {
         return true;
     }
 
