@@ -71,9 +71,13 @@ public class CombatEventHandler {
             boolean isTransformed = TransformationHelper.isTransformed(player);
             boolean hasBelt = TransformationHelper.isBeltEquipped(player);
 
+            // FIX: include the active Rider's id so other clients render/track
+            // the correct Rider instead of always assuming Kuuga.
+            String riderId = TransformationHelper.getActiveRiderId(player);
+
             PacketDistributor.sendToPlayersTrackingEntityAndSelf(
                     player,
-                    new SyncRiderStatePacket(player.getId(), isTransformed, hasBelt)
+                    new SyncRiderStatePacket(player.getId(), isTransformed, hasBelt, riderId == null ? "" : riderId)
             );
         }
     }
