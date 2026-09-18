@@ -1,7 +1,7 @@
 package com.neroferno.krm_revo.menu;
 
-import com.neroferno.krm_revo.item.ModItems;
 import com.neroferno.krm_revo.attachment.ModAttachments;
+import com.neroferno.krm_revo.rider.RiderRegistry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -43,11 +43,14 @@ public class RiderMenu extends AbstractContainerMenu {
         // Offhand
         this.addSlot(new SlotItemHandler(offhandInv, 0, 10, 92)); 
 
-        // Driver Belt
+        // Driver Belt — accepts any item registered as a Rider's Driver in
+        // RiderRegistry, not just the original Kuuga belt (fix: this used to
+        // hardcode ModItems.DRIVER_BELT, so a second Rider's belt couldn't
+        // even be placed in the slot).
         this.addSlot(new SlotItemHandler(riderInv, 0, 10, 115) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.is(ModItems.DRIVER_BELT.get());
+                return RiderRegistry.getByDriverItem(stack.getItem()) != null;
             }
         });
 
