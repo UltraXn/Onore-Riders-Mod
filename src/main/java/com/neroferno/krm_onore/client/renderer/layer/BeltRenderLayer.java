@@ -59,9 +59,10 @@ public class BeltRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
             model.setAllVisible(false);
         }
         
+        net.minecraft.resources.ResourceLocation textureRes = BeltArmorRenderer.getBeltTextureForPlayer(player);
         net.minecraft.client.renderer.RenderType renderType = this.beltRenderer.getRenderType(
                 (com.neroferno.krm_onore.item.BeltItem) beltStack.getItem(),
-                this.beltRenderer.getTextureLocation((com.neroferno.krm_onore.item.BeltItem) beltStack.getItem()),
+                textureRes,
                 buffer, partialTick);
         com.mojang.blaze3d.vertex.VertexConsumer vertexConsumer = buffer.getBuffer(renderType);
 
