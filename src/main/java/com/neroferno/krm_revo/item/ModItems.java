@@ -20,9 +20,17 @@ public class ModItems {
     /**
      * The core transformation item. When equipped in the Curios 'belt' slot,
      * it grants access to the transformation UI (K key) and combat bonuses.
+     *
+     * Kuuga's idle animation and item renderer are now passed in explicitly
+     * (BeltItem no longer hardcodes them), so when you add a second Rider's
+     * Driver below, it can register its own animation + renderer here
+     * instead of inheriting Kuuga's.
      */
     public static final DeferredItem<BeltItem> DRIVER_BELT =
-            ITEMS.register("driver_belt", BeltItem::new);
+            ITEMS.register("driver_belt", () -> new BeltItem(
+                    "animation.driver_belt.idle",
+                    com.neroferno.krm_revo.client.renderer.BeltItemRenderer::new
+            ));
 
     public static final DeferredItem<SuitVisualItem> KUUGA_SUIT_VISUAL =
             ITEMS.register("kuuga_suit_visual", SuitVisualItem::new);
