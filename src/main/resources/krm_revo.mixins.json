@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "com.neroferno.krm_revo.mixin",
+  "package": "com.neroferno.krm_onore.mixin",
   "compatibilityLevel": "JAVA_21",
   "refmap": "krm_revo.refmap.json",
   "mixins": [
