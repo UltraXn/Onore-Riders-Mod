@@ -38,6 +38,7 @@ import com.neroferno.krm_onore.network.TransformationHelper;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.minecraft.client.player.Input;
 
@@ -190,19 +191,28 @@ class KRMRevoGameClientEvents {
                     }
                 }
 
-                if (riderKickState == 1) { // Phase 1: High Leap
-                    if (clientTicks >= 8) {
-                        player.setDeltaMovement(Vec3.ZERO);
+                if (riderKickState == 1) { // Phase 1: High Leap & Tokusatsu Apex Hover
+                    // When upward momentum begins flattening (approaching apex), apply gentle hover float
+                    if (player.getDeltaMovement().y <= 0.08D && player.getDeltaMovement().y > -0.05D) {
+                        player.setDeltaMovement(player.getDeltaMovement().x * 0.7D, 0.02D, player.getDeltaMovement().z * 0.7D);
                     }
-                } else if (riderKickState == 2) { // Phase 2: Dive Kick
-                    if (clientTicks >= 4) {
-                        Vec3 lookVec = player.getLookAngle();
-                        double diveY = lookVec.y;
-                        if (diveY > -0.4D) diveY = -0.8D; // force diving down
-                        Vec3 diveVec = new Vec3(lookVec.x, diveY, lookVec.z).normalize().scale(4.0D); // Upgraded to 4.0D!
-                        player.setDeltaMovement(diveVec);
+                } else if (riderKickState == 2) { // Phase 2: Curved Bézier Dive Kick
+                    // Smooth cinematic camera target-lock towards target's torso
+                    double tx = player.getPersistentData().getDouble("RiderKickTargetX");
+                    double ty = player.getPersistentData().getDouble("RiderKickTargetY");
+                    double tz = player.getPersistentData().getDouble("RiderKickTargetZ");
+                    if (tx != 0 || ty != 0 || tz != 0) {
+                        double dx = tx - localPlayer.getX();
+                        double dy = ty - localPlayer.getEyeY();
+                        double dz = tz - localPlayer.getZ();
+                        double distHoriz = Math.sqrt(dx * dx + dz * dz);
+                        float targetPitch = (float) (-(Mth.atan2(dy, distHoriz) * (180.0F / (float) Math.PI)));
+                        float targetYaw = (float) (Mth.atan2(dz, dx) * (180.0F / (float) Math.PI)) - 90.0F;
+
+                        localPlayer.setXRot(Mth.rotLerp(0.25F, localPlayer.getXRot(), targetPitch));
+                        localPlayer.setYRot(Mth.rotLerp(0.25F, localPlayer.getYRot(), targetYaw));
                     }
-                } else if (riderKickState == 3) { // Phase 3: Impact Pause
+                } else if (riderKickState == 3) { // Phase 3: Hit-Stop & Impact Pause
                     player.setDeltaMovement(Vec3.ZERO);
                 }
 
@@ -230,11 +240,11 @@ class KRMRevoGameClientEvents {
         
         java.util.concurrent.ThreadLocalRandom rand = java.util.concurrent.ThreadLocalRandom.current();
         
-        if (state == 1) { // Leap / Charging Phase
-            // Swirling sparks rising up around the player's body
+        if (state == 1) { // Leap / Apex Hover Phase
+            // Swirling sparks concentrating around the player's body and right leg
             for (int i = 0; i < 3; i++) {
                 double angle = rand.nextDouble() * Math.PI * 2;
-                double radius = 0.5D + rand.nextDouble() * 0.3D;
+                double radius = 0.45D + rand.nextDouble() * 0.25D;
                 double px = player.getX() + Math.cos(angle) * radius;
                 double py = player.getY() + rand.nextDouble() * player.getBbHeight();
                 double pz = player.getZ() + Math.sin(angle) * radius;
@@ -245,43 +255,57 @@ class KRMRevoGameClientEvents {
                     engine.createParticle(ParticleTypes.FLAME, px, py, pz, 0, 0.05D, 0);
                 }
             }
-        } else if (state == 2) { // Dive Kick Phase
-            // Dense fiery trail and custom sparks flowing from the player's feet (especially the right leg!)
+        } else if (state == 2) { // Curved Bézier Dive Kick Phase
+            // Dense fiery trail and custom sparks flowing behind the player's kicking foot
             Vec3 footPos = player.position().add(0, 0.15D, 0);
+            Vec3 vel = player.getDeltaMovement();
             
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 6; i++) {
                 double rx = (rand.nextDouble() - 0.5D) * 0.4D;
                 double ry = (rand.nextDouble() - 0.5D) * 0.2D;
                 double rz = (rand.nextDouble() - 0.5D) * 0.4D;
                 
-                // Fiery combustion
+                // Fiery combustion trailing backwards along the velocity vector
                 engine.createParticle(ParticleTypes.FLAME, footPos.x + rx, footPos.y + ry, footPos.z + rz, 
-                        -player.getDeltaMovement().x * 0.2, -player.getDeltaMovement().y * 0.2, -player.getDeltaMovement().z * 0.2);
+                        -vel.x * 0.18D, -vel.y * 0.18D, -vel.z * 0.18D);
                 
-                // Sparks shooting backwards from the kick direction
+                // Linear sparks shooting backwards with slight dispersion
                 engine.createParticle(ModParticles.LINEAR_SPARK.get(), footPos.x + rx, footPos.y + ry, footPos.z + rz,
-                        -player.getDeltaMovement().x * 0.4 + (rand.nextDouble() - 0.5D) * 0.2D,
-                        -player.getDeltaMovement().y * 0.4 + (rand.nextDouble() - 0.5D) * 0.2D,
-                        -player.getDeltaMovement().z * 0.4 + (rand.nextDouble() - 0.5D) * 0.2D);
+                        -vel.x * 0.35D + (rand.nextDouble() - 0.5D) * 0.15D,
+                        -vel.y * 0.35D + (rand.nextDouble() - 0.5D) * 0.15D,
+                        -vel.z * 0.35D + (rand.nextDouble() - 0.5D) * 0.15D);
             }
             
+            // Spark flashes bursting occasionally along the trajectory
+            if (rand.nextFloat() < 0.25F) {
+                engine.createParticle(ModParticles.SPARK_FLASH.get(), footPos.x, footPos.y, footPos.z, 0, 0, 0);
+            }
             // Lava/embers drippings
             if (rand.nextInt(3) == 0) {
                 engine.createParticle(ParticleTypes.LAVA, footPos.x, footPos.y, footPos.z, 0, 0, 0);
             }
-        } else if (state == 3) { // Landing Slide / Delayed explosion charging phase
-            // Flame/spark circles expanding on the ground!
+        } else if (state == 3) { // Hit-Stop (5 ticks) & Landing Slide
             Vec3 pos = player.position();
+            // Intense spark flashes at the impact point during hit-stop
+            for (int i = 0; i < 5; i++) {
+                double angle = rand.nextDouble() * Math.PI * 2;
+                double speed = 0.2D + rand.nextDouble() * 0.3D;
+                engine.createParticle(ModParticles.LINEAR_SPARK.get(), pos.x, pos.y + 0.8D, pos.z,
+                        Math.cos(angle) * speed, (rand.nextDouble() - 0.3D) * 0.25D, Math.sin(angle) * speed);
+            }
+
+            if (rand.nextBoolean()) {
+                engine.createParticle(ModParticles.SPARK_FLASH.get(), pos.x, pos.y + 0.8D, pos.z, 0, 0, 0);
+            }
+
+            // Expanding flame/spark circles on the ground
             double radius = 1.0D + (player.tickCount % 5) * 0.3D;
-            
             for (int i = 0; i < 4; i++) {
                 double angle = rand.nextDouble() * Math.PI * 2;
                 double px = pos.x + Math.cos(angle) * radius;
                 double pz = pos.z + Math.sin(angle) * radius;
                 
                 engine.createParticle(ParticleTypes.FLAME, px, pos.y + 0.1D, pz, 0, 0.02D, 0);
-                engine.createParticle(ModParticles.LINEAR_SPARK.get(), px, pos.y + 0.1D, pz, 
-                        Math.cos(angle) * 0.1D, 0.05D, Math.sin(angle) * 0.1D);
             }
         }
     }

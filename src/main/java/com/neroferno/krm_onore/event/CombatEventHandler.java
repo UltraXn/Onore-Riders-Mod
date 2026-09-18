@@ -19,6 +19,9 @@ import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
 import net.minecraft.server.level.ServerPlayer;
 import com.neroferno.krm_onore.network.SyncVelocityPacket;
 import com.neroferno.krm_onore.network.TransformVFXPacket;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import java.util.List;
 
 /**
@@ -134,128 +137,209 @@ public class CombatEventHandler {
                 }
             }
 
-            if (state == 1) { // Phase 1: High Leap
-                // Apex detection: peak of vertical leap (y velocity <= 0.02) after ascending at least 2 ticks
-                if ((ticks >= 2 && player.getDeltaMovement().y <= 0.02D) || ticks >= 25) { // Apex reached
-                    // Stop momentum momentarily to show the cinematic charge pose!
+            if (state == 1) { // Phase 1: High Leap & Tokusatsu Apex Hover
+                // Apex detection: peak of vertical leap (y velocity <= 0.08D) or ticks >= 18
+                int hoverTicks = player.getPersistentData().getInt("RiderKickHoverTicks");
+
+                if (hoverTicks > 0 || (ticks >= 2 && player.getDeltaMovement().y <= 0.08D) || ticks >= 20) {
+                    hoverTicks++;
+                    player.getPersistentData().putInt("RiderKickHoverTicks", hoverTicks);
+
+                    // Low gravity hover: gentle float at the apex while charging the kick pose
+                    Vec3 currentVel = player.getDeltaMovement();
+                    Vec3 hoverVel = new Vec3(currentVel.x * 0.6D, 0.02D, currentVel.z * 0.6D);
+                    player.setDeltaMovement(hoverVel);
+                    player.hurtMarked = true;
+                    PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncVelocityPacket(hoverVel.x, hoverVel.y, hoverVel.z));
+
+                    if (hoverTicks == 1) {
+                        // Play apex charging sound on hover start
+                        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                                net.minecraft.sounds.SoundEvents.FIRECHARGE_USE, net.minecraft.sounds.SoundSource.PLAYERS, 1.5f, 1.2f);
+                    }
+
+                    // Hover lasts 7 ticks (approx ~0.35s slow-mo peak)
+                    if (hoverTicks >= 7) {
+                        // Store Apex starting point for the Bézier curve
+                        player.getPersistentData().putDouble("RiderKickApexX", player.getX());
+                        player.getPersistentData().putDouble("RiderKickApexY", player.getY());
+                        player.getPersistentData().putDouble("RiderKickApexZ", player.getZ());
+
+                        // Transition to Phase 2 (Curved Bézier Dive Kick)
+                        player.getPersistentData().putInt("RiderKickState", 2);
+                        player.getPersistentData().putInt("RiderKickTicks", 0);
+                        player.getPersistentData().putInt("RiderKickHoverTicks", 0);
+                        syncRiderKickState(player, 2);
+
+                        // Play swoosh launch wind sound
+                        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                                net.minecraft.sounds.SoundEvents.WIND_CHARGE_THROW, net.minecraft.sounds.SoundSource.PLAYERS, 2.0f, 0.55f);
+                    }
+                }
+            } else if (state == 2) { // Phase 2: Curved Bézier Dive Kick
+                // P0: Apex launch position
+                Vec3 p0 = new Vec3(
+                        player.getPersistentData().getDouble("RiderKickApexX"),
+                        player.getPersistentData().getDouble("RiderKickApexY"),
+                        player.getPersistentData().getDouble("RiderKickApexZ")
+                );
+
+                // Target position P2 (updated from target if alive)
+                double tx = player.getPersistentData().getDouble("RiderKickTargetX");
+                double ty = player.getPersistentData().getDouble("RiderKickTargetY");
+                double tz = player.getPersistentData().getDouble("RiderKickTargetZ");
+
+                targetId = player.getPersistentData().getInt("RiderKickTargetId");
+                if (targetId != 0) {
+                    net.minecraft.world.entity.Entity targetEntity = player.level().getEntity(targetId);
+                    if (targetEntity instanceof LivingEntity target && target.isAlive()) {
+                        tx = target.getX();
+                        ty = target.getY() + target.getBbHeight() * 0.55D; // Target center of mass / chest
+                        tz = target.getZ();
+                        player.getPersistentData().putDouble("RiderKickTargetX", tx);
+                        player.getPersistentData().putDouble("RiderKickTargetY", ty);
+                        player.getPersistentData().putDouble("RiderKickTargetZ", tz);
+                    }
+                }
+                Vec3 p2 = new Vec3(tx, ty, tz);
+
+                // Control Point P1: Elevated midpoint generating the downward Tokusatsu swooping comba
+                Vec3 mid = p0.add(p2).scale(0.5D);
+                Vec3 p1 = new Vec3(mid.x, Math.max(p0.y, p2.y) + 1.2D, mid.z);
+
+                double totalDist = p0.distanceTo(p2);
+                int totalDiveTicks = (int) Math.max(6, Math.min(14, totalDist * 0.7D));
+
+                double u = Math.min(1.0D, (double) ticks / totalDiveTicks);
+                double uNext = Math.min(1.0D, (double) (ticks + 1) / totalDiveTicks);
+
+                // Ease-In acceleration (starts smooth, accelerates to explosive speed)
+                double t = u * u;
+                double tNext = uNext * uNext;
+
+                // Quadratic Bézier: B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
+                double oneMinusT = 1.0D - t;
+                Vec3 curTargetPos = p0.scale(oneMinusT * oneMinusT)
+                        .add(p1.scale(2.0D * oneMinusT * t))
+                        .add(p2.scale(t * t));
+
+                double oneMinusTNext = 1.0D - tNext;
+                Vec3 nextTargetPos = p0.scale(oneMinusTNext * oneMinusTNext)
+                        .add(p1.scale(2.0D * oneMinusTNext * tNext))
+                        .add(p2.scale(tNext * tNext));
+
+                Vec3 desiredVel = nextTargetPos.subtract(player.position());
+                if (desiredVel.length() > 3.8D) {
+                    desiredVel = desiredVel.normalize().scale(3.8D);
+                }
+
+                player.setDeltaMovement(desiredVel);
+                player.hurtMarked = true;
+                PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncVelocityPacket(desiredVel.x, desiredVel.y, desiredVel.z));
+
+                // Continuous Collision Detection (Raycast between current position and next position)
+                Vec3 currentPos = player.position();
+                Vec3 nextPos = currentPos.add(desiredVel);
+
+                // 1. Entity sweep detection
+                AABB sweepBox = player.getBoundingBox().minmax(player.getBoundingBox().move(desiredVel)).inflate(0.5D);
+                List<LivingEntity> hitEntities = player.level().getEntitiesOfClass(LivingEntity.class, sweepBox,
+                        entity -> entity != player && entity.isAlive());
+
+                // 2. Block clip detection
+                BlockHitResult blockHit = player.level().clip(new ClipContext(currentPos, nextPos,
+                        ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+
+                boolean hitTarget = !hitEntities.isEmpty();
+                boolean hitBlock = blockHit.getType() != HitResult.Type.MISS;
+                boolean reachedEnd = u >= 0.95D || player.onGround();
+
+                if (hitTarget || hitBlock || reachedEnd) {
+                    // Transition to Phase 3: Hit-Stop
+                    player.getPersistentData().putInt("RiderKickState", 3);
+                    player.getPersistentData().putInt("RiderKickTicks", 0);
                     player.setDeltaMovement(Vec3.ZERO);
                     player.hurtMarked = true;
                     PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncVelocityPacket(0, 0, 0));
+                    syncRiderKickState(player, 3);
 
-                    // Transition to Phase 2 (Dive kick charge)
-                    player.getPersistentData().putInt("RiderKickState", 2);
-                    player.getPersistentData().putInt("RiderKickTicks", 0);
-                    syncRiderKickState(player, 2);
+                    Vec3 impactPos = hitTarget ? hitEntities.get(0).position().add(0, hitEntities.get(0).getBbHeight() * 0.5D, 0) :
+                                     hitBlock ? blockHit.getLocation() : player.position();
 
-                    // Play apex charging sound
-                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                             net.minecraft.sounds.SoundEvents.FIRECHARGE_USE, net.minecraft.sounds.SoundSource.PLAYERS, 1.5f, 1.2f);
-                }
-            } else if (state == 2) { // Phase 2: Dive Kick
-                if (ticks == 4) { // Start downward dive after a tiny pause of 4 ticks
-                    Vec3 lookVec = player.getLookAngle();
-                    double diveY = lookVec.y;
-                    if (diveY > -0.4D) diveY = -0.8D; // force diving down
-                    Vec3 diveVec = new Vec3(lookVec.x, diveY, lookVec.z).normalize().scale(4.0D); // Upgraded to 4.0D!
-                    player.setDeltaMovement(diveVec);
-                    player.hurtMarked = true;
-                    PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncVelocityPacket(diveVec.x, diveVec.y, diveVec.z));
+                    player.getPersistentData().putDouble("RiderKickImpactX", impactPos.x);
+                    player.getPersistentData().putDouble("RiderKickImpactY", impactPos.y);
+                    player.getPersistentData().putDouble("RiderKickImpactZ", impactPos.z);
 
-                    // Play swoosh wind sound
-                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                            net.minecraft.sounds.SoundEvents.WIND_CHARGE_THROW, net.minecraft.sounds.SoundSource.PLAYERS, 1.5f, 0.6f);
-                }
-
-                if (ticks >= 4) {
-                    // Check collision
-                    AABB footBox = player.getBoundingBox().inflate(0.8D);
-                    List<LivingEntity> targets = player.level().getEntitiesOfClass(LivingEntity.class, footBox,
-                            entity -> entity != player && entity.isAlive());
-
-                    boolean hitGround = player.onGround();
-                    boolean hitTarget = !targets.isEmpty();
-
-                    if (hitGround || hitTarget) {
-                        // Transition to Phase 3: Impact pause
-                        player.getPersistentData().putInt("RiderKickState", 3);
-                        player.getPersistentData().putInt("RiderKickTicks", 0);
-                        player.setDeltaMovement(Vec3.ZERO);
-                        player.hurtMarked = true;
-                        PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncVelocityPacket(0, 0, 0));
-                        syncRiderKickState(player, 3);
-
-                        // Store impact location
-                        player.getPersistentData().putDouble("RiderKickImpactX", player.getX());
-                        player.getPersistentData().putDouble("RiderKickImpactY", player.getY());
-                        player.getPersistentData().putDouble("RiderKickImpactZ", player.getZ());
-
-                        // Initial heavy blow (keep locked, do not knock back yet)
-                        if (hitTarget) {
-                            for (LivingEntity target : targets) {
-                                target.hurt(player.damageSources().playerAttack(player), 12.0f); // 6 Hearts initial impact
-                            }
+                    // Initial strike impact damage (locks victim in place during hit-stop)
+                    if (hitTarget) {
+                        for (LivingEntity victim : hitEntities) {
+                            victim.hurt(player.damageSources().playerAttack(player), 14.0f); // 7 Hearts initial impact
                         }
-
-                        // Play impact sounds
-                        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                                net.minecraft.sounds.SoundEvents.ZOMBIE_ATTACK_WOODEN_DOOR, net.minecraft.sounds.SoundSource.PLAYERS, 2.0f, 0.5f);
-                        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                                net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_IMPACT, net.minecraft.sounds.SoundSource.PLAYERS, 1.2f, 1.5f);
                     }
+
+                    // Initial heavy contact impact sounds
+                    player.level().playSound(null, impactPos.x, impactPos.y, impactPos.z,
+                            net.minecraft.sounds.SoundEvents.ZOMBIE_ATTACK_WOODEN_DOOR, net.minecraft.sounds.SoundSource.PLAYERS, 2.0f, 0.5f);
+                    player.level().playSound(null, impactPos.x, impactPos.y, impactPos.z,
+                            net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_IMPACT, net.minecraft.sounds.SoundSource.PLAYERS, 1.2f, 1.6f);
                 }
 
-                if (ticks > 100) { // Safety timeout
+                if (ticks > 80) { // Safety timeout
                     player.getPersistentData().putInt("RiderKickState", 0);
                     player.getPersistentData().putBoolean("RiderKickFallImmunity", false);
                     syncRiderKickState(player, 0);
                     releaseTarget(player);
                 }
-            } else if (state == 3) { // Phase 3: Delayed cinematic explosion
-                // Freeze the player completely in 3D stasis at impact point
+            } else if (state == 3) { // Phase 3: Hit-Stop (5 ticks) & Delayed Explosion Slide-Off
                 double ix = player.getPersistentData().getDouble("RiderKickImpactX");
                 double iy = player.getPersistentData().getDouble("RiderKickImpactY");
                 double iz = player.getPersistentData().getDouble("RiderKickImpactZ");
+
+                // Freeze in place during Hit-Stop (5 ticks)
                 player.teleportTo(ix, iy, iz);
                 player.setDeltaMovement(Vec3.ZERO);
                 player.hurtMarked = true;
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncVelocityPacket(0, 0, 0));
 
-                if (ticks >= 12) { // The big bang!
-                    double x = player.getPersistentData().getDouble("RiderKickImpactX");
-                    double y = player.getPersistentData().getDouble("RiderKickImpactY");
-                    double z = player.getPersistentData().getDouble("RiderKickImpactZ");
+                if (ticks % 2 == 0) {
+                    player.level().playSound(null, ix, iy, iz,
+                            net.minecraft.sounds.SoundEvents.FIREWORK_ROCKET_BLAST, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.4f);
+                }
 
+                if (ticks >= 5) { // The big bang after 5 ticks of Hit-Stop!
                     // AOE explosive damage
-                    AABB blastArea = new AABB(x - 4.5D, y - 2.0D, z - 4.5D, x + 4.5D, y + 3.0D, z + 4.5D);
+                    AABB blastArea = new AABB(ix - 4.5D, iy - 2.0D, iz - 4.5D, ix + 4.5D, iy + 3.0D, iz + 4.5D);
                     List<LivingEntity> victims = player.level().getEntitiesOfClass(LivingEntity.class, blastArea,
                             entity -> entity != player && entity.isAlive());
 
                     for (LivingEntity victim : victims) {
                         victim.hurt(player.damageSources().playerAttack(player), 28.0f); // Massive finishing burst damage (14 Hearts!)
-                        Vec3 kbVec = victim.position().subtract(new Vec3(x, y, z)).normalize().scale(2.2D);
+                        Vec3 kbVec = victim.position().subtract(new Vec3(ix, iy, iz)).normalize().scale(2.2D);
                         victim.push(kbVec.x, 0.8D, kbVec.z);
                         victim.setRemainingFireTicks(100);
                     }
 
                     // Trigger client screenshake & electric explosion
                     PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
-                            new TransformVFXPacket(x, y, z, true));
+                            new TransformVFXPacket(ix, iy, iz, true));
 
                     // Delayed explosion sounds
-                    player.level().playSound(null, x, y, z, net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(), net.minecraft.sounds.SoundSource.PLAYERS, 2.5f, 0.55f);
-                    player.level().playSound(null, x, y, z, net.minecraft.sounds.SoundEvents.DRAGON_FIREBALL_EXPLODE, net.minecraft.sounds.SoundSource.PLAYERS, 2.0f, 0.8f);
+                    player.level().playSound(null, ix, iy, iz, net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(), net.minecraft.sounds.SoundSource.PLAYERS, 2.5f, 0.55f);
+                    player.level().playSound(null, ix, iy, iz, net.minecraft.sounds.SoundEvents.DRAGON_FIREBALL_EXPLODE, net.minecraft.sounds.SoundSource.PLAYERS, 2.0f, 0.8f);
 
                     // Ability completed
                     player.getPersistentData().putInt("RiderKickState", 0);
+                    player.getPersistentData().putInt("RiderKickHoverTicks", 0);
                     player.getPersistentData().putBoolean("RiderKickFallImmunity", false);
                     syncRiderKickState(player, 0);
                     releaseTarget(player);
 
-                    // Epic slide off finish
-                    Vec3 slide = player.getLookAngle().scale(1.2D);
-                    player.setDeltaMovement(new Vec3(slide.x, 0.1D, slide.z));
+                    // Epic slide-off finish!
+                    Vec3 look = player.getLookAngle();
+                    Vec3 slide = new Vec3(look.x, 0.05D, look.z).normalize().scale(1.25D);
+                    player.setDeltaMovement(slide);
                     player.hurtMarked = true;
-                    PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncVelocityPacket(slide.x, 0.1D, slide.z));
+                    PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncVelocityPacket(slide.x, slide.y, slide.z));
                 }
             }
         }
@@ -284,6 +368,7 @@ public class CombatEventHandler {
                 }
             }
             player.getPersistentData().putInt("RiderKickTargetId", 0);
+            player.getPersistentData().putInt("RiderKickHoverTicks", 0);
             PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                     new com.neroferno.krm_onore.network.SyncRiderKickTargetPacket(player.getId(), 0, 0, 0, 0));
         }

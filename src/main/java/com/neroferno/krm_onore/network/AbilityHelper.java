@@ -67,7 +67,13 @@ public class AbilityHelper {
         // Initialize state machine
         player.getPersistentData().putInt("RiderKickState", 1); // 1 = Leap Phase
         player.getPersistentData().putInt("RiderKickTicks", 0);
+        player.getPersistentData().putInt("RiderKickHoverTicks", 0);
         player.getPersistentData().putBoolean("RiderKickFallImmunity", true);
+
+        // Store start position
+        player.getPersistentData().putDouble("RiderKickStartX", player.getX());
+        player.getPersistentData().putDouble("RiderKickStartY", player.getY());
+        player.getPersistentData().putDouble("RiderKickStartZ", player.getZ());
 
         // 1. Play the 'kick' animation for all tracking clients
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
