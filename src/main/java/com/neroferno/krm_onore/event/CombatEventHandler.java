@@ -214,15 +214,9 @@ public class CombatEventHandler {
                 double uNext = Math.min(1.0D, (double) (ticks + 1) / totalDiveTicks);
 
                 // Ease-In acceleration (starts smooth, accelerates to explosive speed)
-                double t = u * u;
                 double tNext = uNext * uNext;
 
-                // Quadratic Bézier: B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
-                double oneMinusT = 1.0D - t;
-                Vec3 curTargetPos = p0.scale(oneMinusT * oneMinusT)
-                        .add(p1.scale(2.0D * oneMinusT * t))
-                        .add(p2.scale(t * t));
-
+                // Quadratic Bézier target position for next step: B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
                 double oneMinusTNext = 1.0D - tNext;
                 Vec3 nextTargetPos = p0.scale(oneMinusTNext * oneMinusTNext)
                         .add(p1.scale(2.0D * oneMinusTNext * tNext))
