@@ -2,6 +2,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'net.neoforged.gradle.userdev' version '7.1.39'
+    id 'org.jetbrains.kotlin.jvm' version '2.0.21'
 }
 
 tasks.named('wrapper', Wrapper).configure {
@@ -31,6 +32,12 @@ repositories {
     }
     // PlayerAnimator - for custom player animations
     maven { url = 'https://maven.kosmx.dev/' }
+    // Kotlin for Forge
+    maven {
+        name = 'Kotlin for Forge'
+        url = 'https://thedarkcolour.github.io/KotlinForForge/'
+        content { includeGroup("thedarkcolour") }
+    }
     mavenCentral()
     google()
 }
@@ -41,6 +48,7 @@ base {
 
 // Mojang ships Java 21 to end users in 1.21.1, so mods should target Java 21.
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+kotlin.jvmToolchain(21)
 
 //minecraft.accessTransformers.file rootProject.file('src/main/resources/META-INF/accesstransformer.cfg')
 //minecraft.accessTransformers.entry public net.minecraft.client.Minecraft textureManager # textureManager
@@ -106,6 +114,9 @@ configurations {
 dependencies {
     // Specify the version of Minecraft and NeoForge to use.
     implementation "net.neoforged:neoforge:${neo_version}"
+
+    // Kotlin for Forge: Language provider and runtime for NeoForge (Kotlin 2.0.21)
+    implementation "thedarkcolour:kotlinforforge-neoforge:5.6.0"
 
     // Onore Rider Core Visual & API Dependencies
     // GeckoLib: 3D animations for armor/entities (Blockbench-compatible)

@@ -67,7 +67,9 @@ public class KRMRevoMod {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         LOGGER.info("Onore Rider — Common Setup complete.");
-
+        com.neroferno.krm_revo.seasons.heisei1.Kuuga.init();
+        LOGGER.info("Onore Rider — Kamen Rider Engine initialized with {} riders.",
+                com.neroferno.krm_revo.engine.RiderRegistry.getAll().size());
     }
 }
 
