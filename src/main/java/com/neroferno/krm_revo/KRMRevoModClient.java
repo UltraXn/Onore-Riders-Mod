@@ -1,7 +1,6 @@
 package com.neroferno.krm_revo;
 
 import com.neroferno.krm_revo.client.ModKeybindings;
-import com.lowdragmc.lowdraglib2.gui.holder.ModularUIContainerScreen;
 import com.neroferno.krm_revo.client.screen.RiderScreen;
 import com.neroferno.krm_revo.menu.ModMenuTypes;
 
