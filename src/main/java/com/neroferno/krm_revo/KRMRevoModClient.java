@@ -21,6 +21,7 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import com.neroferno.krm_revo.client.renderer.layer.SuitRenderLayer;
 import com.neroferno.krm_revo.client.renderer.layer.BeltRenderLayer;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.neoforged.fml.common.Mod;
@@ -162,7 +163,8 @@ class KRMRevoGameClientEvents {
             
             // Only process key clicks and local movement simulation for the local player
             Minecraft mc = Minecraft.getInstance();
-            if (player == mc.player) {
+            LocalPlayer localPlayer = mc.player;
+            if (localPlayer != null && player == localPlayer) {
                 // Client-side movement replication for local player to prevent rubberbanding/desync
                 int prevKickState = player.getPersistentData().getInt("PrevRiderKickState");
                 int clientTicks = player.getPersistentData().getInt("ClientRiderKickTicks");
@@ -175,16 +177,16 @@ class KRMRevoGameClientEvents {
                 }
                 player.getPersistentData().putInt("ClientRiderKickTicks", clientTicks);
 
-                if (player == mc.player && riderKickState > 0) {
-                    if (mc.player.input != null) {
-                        mc.player.input.left = false;
-                        mc.player.input.right = false;
-                        mc.player.input.up = false;
-                        mc.player.input.down = false;
-                        mc.player.input.leftImpulse = 0.0F;
-                        mc.player.input.forwardImpulse = 0.0F;
-                        mc.player.input.jumping = false;
-                        mc.player.input.shiftKeyDown = false;
+                if (riderKickState > 0) {
+                    if (localPlayer.input != null) {
+                        localPlayer.input.left = false;
+                        localPlayer.input.right = false;
+                        localPlayer.input.up = false;
+                        localPlayer.input.down = false;
+                        localPlayer.input.leftImpulse = 0.0F;
+                        localPlayer.input.forwardImpulse = 0.0F;
+                        localPlayer.input.jumping = false;
+                        localPlayer.input.shiftKeyDown = false;
                     }
                 }
 
@@ -210,7 +212,7 @@ class KRMRevoGameClientEvents {
 
                 if (ModKeybindings.ABILITY_KEY.consumeClick()) {
                     // Abilities only work when no weapon is equipped (per design doc) and player is transformed
-                    if (mc.player.getMainHandItem().isEmpty() && TransformationHelper.isTransformed(mc.player)) {
+                    if (localPlayer.getMainHandItem().isEmpty() && TransformationHelper.isTransformed(localPlayer)) {
                         PacketDistributor.sendToServer(new AbilityPacket("rider_kick"));
                     }
                 }
