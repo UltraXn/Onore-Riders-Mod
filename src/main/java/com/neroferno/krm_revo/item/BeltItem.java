@@ -1,6 +1,7 @@
 package com.neroferno.krm_revo.item;
 
 import com.neroferno.krm_revo.attachment.ModAttachments;
+import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -20,9 +21,16 @@ import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * The KRM Driver Belt item with full GeckoLib 3D model support.
+ *
+ * FIX: idle animation and custom renderer used to be hardcoded on this
+ * class, so every Rider's belt rendered with Kuuga's model/animation
+ * regardless of which Rider it actually belonged to. Both are now supplied
+ * per-instance via the constructor, so each Rider registers its own
+ * BeltItem with its own look.
  *
  * It acts as a Curio accessory.
  */
@@ -30,9 +38,21 @@ import java.util.function.Consumer;
 public class BeltItem extends Item implements GeoItem {
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private final String idleAnimation;
+    private final Supplier<BlockEntityWithoutLevelRenderer> rendererFactory;
 
-    public BeltItem() {
+    /**
+     * @param idleAnimation   GeckoLib animation name for this belt's idle loop,
+     *                        e.g. "animation.driver_belt.idle".
+     * @param rendererFactory supplies this belt's custom item renderer, e.g.
+     *                        {@code BeltItemRenderer::new}. Called lazily
+     *                        each time the client asks for a renderer, same
+     *                        as the old hardcoded behavior.
+     */
+    public BeltItem(String idleAnimation, Supplier<BlockEntityWithoutLevelRenderer> rendererFactory) {
         super(new Item.Properties().stacksTo(1));
+        this.idleAnimation = idleAnimation;
+        this.rendererFactory = rendererFactory;
     }
 
     /**
@@ -66,8 +86,8 @@ public class BeltItem extends Item implements GeoItem {
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
         consumer.accept(new IClientItemExtensions() {
             @Override
-            public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                return new com.neroferno.krm_revo.client.renderer.BeltItemRenderer();
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                return rendererFactory.get();
             }
         });
     }
@@ -75,7 +95,7 @@ public class BeltItem extends Item implements GeoItem {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(this, "idle_controller", 5, state -> {
-            state.getController().setAnimation(RawAnimation.begin().thenLoop("animation.driver_belt.idle"));
+            state.getController().setAnimation(RawAnimation.begin().thenLoop(idleAnimation));
             return PlayState.CONTINUE;
         }));
     }
