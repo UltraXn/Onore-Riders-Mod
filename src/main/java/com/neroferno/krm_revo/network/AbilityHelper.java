@@ -1,6 +1,7 @@
 package com.neroferno.krm_revo.network;
 
-import com.neroferno.krm_revo.item.ModItems;
+import com.neroferno.krm_revo.rider.RiderDefinition;
+import com.neroferno.krm_revo.rider.ability.RiderAbility;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
@@ -21,18 +22,34 @@ public class AbilityHelper {
             return;
         }
 
-        // Check if the belt active ability is on cooldown
-        if (player.getCooldowns().isOnCooldown(ModItems.DRIVER_BELT.get())) {
+        // Resolve which Rider this player has active, live from the equipped belt
+        RiderDefinition rider = TransformationHelper.getActiveRider(player);
+        if (rider == null) {
             return;
         }
 
-        if ("rider_kick".equals(abilityId)) {
-            executeRiderKick(player);
-            // Apply a 10-second (200 ticks) cooldown to the Belt item
-            player.getCooldowns().addCooldown(ModItems.DRIVER_BELT.get(), 200);
+        // FIX: cooldown now keys off this Rider's own Driver item
+        // (rider.getDriver()) instead of the hardcoded ModItems.DRIVER_BELT.
+        // Previously every Rider shared — and stomped on — the same
+        // cooldown bucket, so using Rider #2's ability could put Kuuga's
+        // belt on cooldown too, and vice versa.
+        if (player.getCooldowns().isOnCooldown(rider.getDriver())) {
+            return;
         }
+
+        RiderAbility ability = rider.getAbility(abilityId);
+        if (ability == null) {
+            return;
+        }
+
+        ability.execute(player);
+        player.getCooldowns().addCooldown(rider.getDriver(), ability.getCooldownTicks());
     }
 
+    // NOTE: this method is now unused by executeAbility() above — its body has
+    // been moved into rider/ability/RiderKickAbility.execute(). Kept here only
+    // as reference; delete once you've confirmed RiderKickAbility works.
+    @Deprecated
     private static void executeRiderKick(ServerPlayer player) {
         // 1. Play the 'kick' animation for all tracking clients
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
@@ -62,18 +79,17 @@ public class AbilityHelper {
         // 3. Deal AOE damage
         AABB impactBox = new AABB(impactCenter.x - 2, impactCenter.y - 1, impactCenter.z - 2,
                 impactCenter.x + 2, impactCenter.y + 2, impactCenter.z + 2);
-        
+
         List<LivingEntity> targets = player.level().getEntitiesOfClass(LivingEntity.class, impactBox,
                 entity -> entity != player && entity.isAlive());
 
         for (LivingEntity target : targets) {
             // Apply high burst damage
             target.hurt(player.damageSources().playerAttack(player), 20.0f); // 10 Hearts of damage
-            
+
             // Knock them back
             Vec3 knockback = target.position().subtract(player.position()).normalize().scale(1.5D);
             target.push(knockback.x, 0.5D, knockback.z);
         }
     }
 }
-
