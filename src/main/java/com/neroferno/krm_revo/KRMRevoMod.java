@@ -37,9 +37,9 @@ public class KRMRevoMod {
             CREATIVE_MODE_TABS.register("krm_tab", () -> CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup.krm_revo"))
                     .withTabsBefore(CreativeModeTabs.COMBAT)
-                    .icon(() -> ModItems.DRIVER_BELT.get().getDefaultInstance())
+                    .icon(() -> ModItems.ARCLE_DRIVER.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
-                        output.accept(ModItems.DRIVER_BELT.get());
+                        output.accept(ModItems.ARCLE_DRIVER.get());
                         output.accept(ModItems.RESEARCHER_DESK_ITEM.get());
                         output.accept(ModItems.MESA_DE_TRABAJO_ITEM.get());
                     }).build());
