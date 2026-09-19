@@ -102,8 +102,8 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
 
         // Slot icons/subtitles for clarity
         guiGraphics.drawCenteredString(font, "§8CASCO", x + 30, y + 116, 0x888888);
-        guiGraphics.drawCenteredString(font, "§8ARMS", x + 30, y + 184, 0x888888);
-        guiGraphics.drawCenteredString(font, "§8BELT", x + 61, y + 184, 0x888888);
+        guiGraphics.drawCenteredString(font, "§8BRAZOS", x + 30, y + 184, 0x888888);
+        guiGraphics.drawCenteredString(font, "§8DRIVER", x + 61, y + 184, 0x888888);
 
         // 3. Render 3D Player Avatar Preview in the top-left compartment
         if (this.minecraft != null && this.minecraft.player != null) {
@@ -142,22 +142,22 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         }
 
         // Ability Card 1: Rider Kick
-        renderSkillCard(guiGraphics, x + 97, y + 48, 154, 35,
-                "§e⚡ Rider Kick §7[Tecla V]",
-                "Salto de altitud y remate explosivo.",
-                "§aDesbloqueado §7| Enfriamiento: 10s");
+        renderSkillCard(guiGraphics, x + 97, y + 48, 154, 36,
+                "§e⚡ RIDER KICK §7[Tecla V]",
+                "§fPatada en salto de impacto directo",
+                "§a✔ Desbloqueado §7| §e10s CD");
 
         // Ability Card 2: Rider Melee Combos
-        renderSkillCard(guiGraphics, x + 97, y + 88, 154, 35,
-                "§c🥊 Combos Unarmed §7[Sin arma]",
-                "Cadena de 5 ataques físicos y patadas.",
-                currentForm == 1 ? "§7Daño: §f6.0 §7| Empuje moderado" : "§7Daño: §c12.0 §7| Impacto ígneo");
+        renderSkillCard(guiGraphics, x + 97, y + 88, 154, 36,
+                "§c🥊 COMBATE FÍSICO §7[Desarmado]",
+                "§fCadena fluida de 5 golpes marciales",
+                currentForm == 1 ? "§7Daño: §f6.0 §7| Empuje medio" : "§7Daño: §c12.0 §7| Impacto ígneo");
 
         // Ability Card 3: Arcle Power
-        renderSkillCard(guiGraphics, x + 97, y + 128, 154, 35,
-                "§b🛡 Poder de Arcle §7[Pasiva]",
-                "Inmunidad a daño de caída en patadas.",
-                "§aActivo con Cinturón");
+        renderSkillCard(guiGraphics, x + 97, y + 128, 154, 36,
+                "§b🔷 PODER DE ARCLE §7[Pasiva]",
+                "§fInmunidad a daño de caída en patada",
+                "§a✔ Resonancia Amadam Activa");
 
         // Center Footer Stats
         guiGraphics.drawString(font, "§a★ SP: §f5", x + 99, y + 172, 0xFFFFFF);
@@ -165,22 +165,22 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         guiGraphics.drawString(font, levelStr, x + 250 - font.width(levelStr), y + 172, 0xFFFFFF);
 
         // 6. Render Right-Top Panel (Stats)
-        guiGraphics.drawCenteredString(font, "§6§lSTATS", x + 301, y + 22, 0xFFFF55);
-        guiGraphics.drawString(font, "§c❤ HP: §f100", x + 274, y + 37, 0xFFFFFF);
-        guiGraphics.drawString(font, currentForm == 1 ? "§e⚔ ATK: §f6" : "§e⚔ ATK: §f12", x + 274, y + 51, 0xFFFFFF);
-        guiGraphics.drawString(font, "§9🛡 DEF: §f15", x + 274, y + 65, 0xFFFFFF);
-        guiGraphics.drawString(font, "§a⚡ SPD: §f+20%", x + 274, y + 79, 0xFFFFFF);
+        guiGraphics.drawCenteredString(font, "§6§lSTATS", x + 301, y + 21, 0xFFFF55);
+        guiGraphics.drawString(font, "§c❤ HP: §f100", x + 274, y + 36, 0xFFFFFF);
+        guiGraphics.drawString(font, currentForm == 1 ? "§e⚔ ATK: §f6" : "§e⚔ ATK: §f12", x + 274, y + 50, 0xFFFFFF);
+        guiGraphics.drawString(font, "§9🛡 DEF: §f15", x + 274, y + 64, 0xFFFFFF);
+        guiGraphics.drawString(font, "§a⚡ SPD: §f+20%", x + 274, y + 78, 0xFFFFFF);
 
         // 7. Render Right-Bottom Panel (Status)
         guiGraphics.drawCenteredString(font, "§e§lESTADO", x + 301, y + 112, 0xFFFFAA);
         boolean isTransformed = this.minecraft != null && this.minecraft.player != null
                 && TransformationHelper.isTransformed(this.minecraft.player);
         if (isTransformed) {
-            guiGraphics.drawCenteredString(font, "§aTRANSFORMADO", x + 301, y + 126, 0x55FF55);
-            guiGraphics.drawCenteredString(font, currentForm == 1 ? "§fGROWING" : "§cMIGHTY", x + 301, y + 138, 0xFFFFFF);
+            guiGraphics.drawCenteredString(font, "§a● ACTIVO", x + 301, y + 126, 0x55FF55);
+            guiGraphics.drawCenteredString(font, currentForm == 1 ? "§fForma: Growing" : "§cForma: Mighty", x + 301, y + 139, 0xFFFFFF);
         } else {
-            guiGraphics.drawCenteredString(font, "§7HUMANO CIVIL", x + 301, y + 126, 0xAAAAAA);
-            guiGraphics.drawCenteredString(font, "§8Presiona K", x + 301, y + 138, 0x888888);
+            guiGraphics.drawCenteredString(font, "§7○ CIVIL", x + 301, y + 126, 0xAAAAAA);
+            guiGraphics.drawCenteredString(font, "§8Presiona [K]", x + 301, y + 139, 0x888888);
         }
 
         // 8. FINALLY, Blit the metallic frame MARCO.PNG on top of all panels
@@ -190,15 +190,15 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
     }
 
     private void renderSkillCard(GuiGraphics g, int cx, int cy, int cw, int ch, String title, String desc, String footer) {
-        g.fill(cx, cy, cx + cw, cy + ch, 0xFF1C1C1C);
-        g.fill(cx, cy, cx + cw, cy + 1, 0xFF383838);
+        g.fill(cx, cy, cx + cw, cy + ch, 0xFF181818);
+        g.fill(cx, cy, cx + cw, cy + 1, 0xFF353535);
         g.fill(cx, cy + ch - 1, cx + cw, cy + ch, 0xFF101010);
-        g.fill(cx, cy, cx + 1, cy + ch, 0xFF383838);
+        g.fill(cx, cy, cx + 1, cy + ch, 0xFF353535);
         g.fill(cx + cw - 1, cy, cx + cw, cy + ch, 0xFF101010);
 
-        g.drawString(font, title, cx + 5, cy + 4, 0xFFFFFF);
-        g.drawString(font, "§7" + desc, cx + 5, cy + 14, 0xAAAAAA);
-        g.drawString(font, footer, cx + 5, cy + 24, 0x888888);
+        g.drawString(font, title, cx + 6, cy + 4, 0xFFFFFF);
+        g.drawString(font, desc, cx + 6, cy + 15, 0xAAAAAA);
+        g.drawString(font, footer, cx + 6, cy + 25, 0x888888);
     }
 
     @Override
@@ -231,14 +231,64 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         super.render(guiGraphics, mouseX, mouseY, delta);
         renderTooltip(guiGraphics, mouseX, mouseY);
 
-        // Tooltips for Form Selection Tab Buttons
+        // Tooltips for interactive areas
         int x = (width - imageWidth) / 2;
         int y = (height - imageHeight) / 2;
 
+        // Form selection tabs
         if (mouseX >= x + 111 && mouseX < x + 111 + 34 && mouseY >= y + 3 && mouseY < y + 3 + 13) {
-            guiGraphics.renderTooltip(font, Component.literal("Forma Growing (Blanco)"), mouseX, mouseY);
+            guiGraphics.renderTooltip(font, Component.literal("§fKuuga — Forma Growing §7(Blanco Inicial)"), mouseX, mouseY);
         } else if (mouseX >= x + 145 && mouseX < x + 145 + 26 && mouseY >= y + 3 && mouseY < y + 3 + 14) {
-            guiGraphics.renderTooltip(font, Component.literal("Forma Mighty (Rojo)"), mouseX, mouseY);
+            guiGraphics.renderTooltip(font, Component.literal("§cKuuga — Forma Mighty §7(Poder del Fuego)"), mouseX, mouseY);
+        }
+        // Card 1: Rider Kick
+        else if (mouseX >= x + 97 && mouseX < x + 97 + 154 && mouseY >= y + 48 && mouseY < y + 48 + 36) {
+            java.util.List<Component> tooltip = java.util.List.of(
+                    Component.literal("§e⚡ RIDER KICK"),
+                    Component.literal("§7Patada aérea de combate con remate explosivo."),
+                    Component.literal("§c• Daño Base: §f30.0"),
+                    Component.literal("§e• Enfriamiento: §f10 segundos"),
+                    Component.literal("§b• Alcance: §fObjetivo en mira hasta 20m")
+            );
+            guiGraphics.renderComponentTooltip(font, tooltip, mouseX, mouseY);
+        }
+        // Card 2: Combate Físico
+        else if (mouseX >= x + 97 && mouseX < x + 97 + 154 && mouseY >= y + 88 && mouseY < y + 88 + 36) {
+            java.util.List<Component> tooltip = java.util.List.of(
+                    Component.literal("§c🥊 COMBATE FÍSICO DESARMADO"),
+                    Component.literal("§7Cadena fluida de 5 ataques marciales:"),
+                    Component.literal("§8  1-2. Golpes directos"),
+                    Component.literal("§8  3-4. Patadas de intercepción"),
+                    Component.literal("§8  5. Patada giratoria de remate"),
+                    Component.literal("§a• Efecto: §fPermite encadenar con Rider Kick")
+            );
+            guiGraphics.renderComponentTooltip(font, tooltip, mouseX, mouseY);
+        }
+        // Card 3: Núcleo Arcle
+        else if (mouseX >= x + 97 && mouseX < x + 97 + 154 && mouseY >= y + 128 && mouseY < y + 128 + 36) {
+            java.util.List<Component> tooltip = java.util.List.of(
+                    Component.literal("§b🔷 PODER DE ARCLE (AMADAM)"),
+                    Component.literal("§7La piedra sagrada Amadam absorbe la fuerza"),
+                    Component.literal("§7del impacto cinético durante las patadas."),
+                    Component.literal("§a• Pasiva: §fInmunidad total a daño de caída en patadas")
+            );
+            guiGraphics.renderComponentTooltip(font, tooltip, mouseX, mouseY);
+        }
+        // Right-Top: Stats Panel
+        else if (mouseX >= x + 269 && mouseX < x + 333 && mouseY >= y + 17 && mouseY < y + 100) {
+            int currentForm = (this.minecraft != null && this.minecraft.player != null)
+                    ? this.minecraft.player.getPersistentData().getInt("krm_revo:form") : 0;
+            java.util.List<Component> tooltip = java.util.List.of(
+                    Component.literal("§6§lATRIBUTOS DE KUUGA"),
+                    Component.literal("§c❤ Salud (HP): §f100 puntos vitales"),
+                    Component.literal(currentForm == 1
+                            ? "§e⚔ Ataque (ATK): §f6.0 §7(Desarmado Growing)"
+                            : "§e⚔ Ataque (ATK): §f12.0 §7(Fuego Elemental Mighty)"),
+                    Component.literal("§9🛡 Defensa (DEF): §f15 §7(Armadura Blindada)"),
+                    Component.literal("§a⚡ Velocidad (SPD): §f+20% §7(Agilidad Arcle)")
+            );
+            guiGraphics.renderComponentTooltip(font, tooltip, mouseX, mouseY);
         }
     }
 }
+

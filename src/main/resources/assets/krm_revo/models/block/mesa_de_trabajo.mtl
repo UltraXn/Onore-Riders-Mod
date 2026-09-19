@@ -1,4 +1,4 @@
 # Made in Blockbench 5.0.7
 newmtl m_mesa_de_trabajo_mat
-map_Kd texture.png
+map_Kd krm_revo:block/mesa_de_trabajo
 newmtl none

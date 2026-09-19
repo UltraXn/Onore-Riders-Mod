@@ -41,6 +41,19 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.minecraft.client.player.Input;
+import net.neoforged.neoforge.client.event.RenderArmEvent;
+import com.neroferno.krm_onore.client.renderer.SuitVisualRenderer;
+import com.neroferno.krm_onore.item.ModItems;
+import com.neroferno.krm_onore.item.SuitVisualItem;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.item.ItemStack;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.resources.ResourceLocation;
 
 
 /**
@@ -114,6 +127,59 @@ public class KRMRevoModClient {
 @SuppressWarnings("removal")
 @EventBusSubscriber(modid = KRMRevoMod.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 class KRMRevoGameClientEvents {
+    private static SuitVisualRenderer firstPersonSuitRenderer;
+    private static ItemStack firstPersonDummySuit;
+
+    @SubscribeEvent
+    public static void onRenderArm(RenderArmEvent event) {
+        AbstractClientPlayer player = event.getPlayer();
+        if (!TransformationHelper.isTransformed(player)) return;
+
+        if (firstPersonSuitRenderer == null) {
+            firstPersonSuitRenderer = new SuitVisualRenderer();
+            firstPersonDummySuit = new ItemStack(ModItems.KUUGA_SUIT_VISUAL.get());
+        }
+
+        HumanoidArm arm = event.getArm();
+        PoseStack poseStack = event.getPoseStack();
+        MultiBufferSource bufferSource = event.getMultiBufferSource();
+        int packedLight = event.getPackedLight();
+
+        Minecraft mc = Minecraft.getInstance();
+        PlayerRenderer playerRenderer = (PlayerRenderer) mc.getEntityRenderDispatcher().getRenderer(player);
+        PlayerModel<AbstractClientPlayer> parentModel = playerRenderer.getModel();
+
+        parentModel.attackTime = 0.0F;
+        parentModel.crouching = false;
+        parentModel.swimAmount = 0.0F;
+        parentModel.setupAnim(player, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
+        if (arm == HumanoidArm.RIGHT) {
+            parentModel.rightArm.xRot = 0.0F;
+        } else {
+            parentModel.leftArm.xRot = 0.0F;
+        }
+
+        firstPersonSuitRenderer.setFirstPersonArm(arm);
+        firstPersonSuitRenderer.prepForRender(player, firstPersonDummySuit, EquipmentSlot.CHEST, parentModel);
+
+        int form = player.getPersistentData().getInt("krm_revo:form");
+        ResourceLocation textureRes = form == 1 
+            ? ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/growing_suit.png") 
+            : ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/kuuga_suit.png");
+
+        RenderType renderType = firstPersonSuitRenderer.getRenderType((SuitVisualItem) firstPersonDummySuit.getItem(), 
+                                                                     textureRes, 
+                                                                     bufferSource, 0.0F);
+        VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType);
+
+        poseStack.pushPose();
+        firstPersonSuitRenderer.renderToBuffer(poseStack, vertexConsumer, packedLight, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+        poseStack.popPose();
+
+        firstPersonSuitRenderer.clearFirstPerson();
+        event.setCanceled(true);
+    }
+
     @SubscribeEvent
     public static void onMovementInput(MovementInputUpdateEvent event) {
         Player player = event.getEntity();
@@ -144,16 +210,12 @@ class KRMRevoGameClientEvents {
                 spawnRiderKickParticles(player, riderKickState);
             }
 
-            // Client-side target stasis freezing to prevent client prediction drift and gravity falling
+            // Client-side target immobilization to prevent client prediction drift
             int targetId = player.getPersistentData().getInt("RiderKickTargetId");
             if (targetId != 0) {
                 net.minecraft.world.entity.Entity targetEntity = player.level().getEntity(targetId);
                 if (targetEntity instanceof net.minecraft.world.entity.LivingEntity target && target.isAlive()) {
-                    double tx = player.getPersistentData().getDouble("RiderKickTargetX");
-                    double ty = player.getPersistentData().getDouble("RiderKickTargetY");
-                    double tz = player.getPersistentData().getDouble("RiderKickTargetZ");
-                    target.setDeltaMovement(Vec3.ZERO);
-                    target.setPos(tx, ty, tz);
+                    target.setDeltaMovement(0, Math.min(0, target.getDeltaMovement().y), 0);
                     target.hurtMarked = true;
                     if (target instanceof net.minecraft.world.entity.Mob mob) {
                         mob.setNoAi(true);
@@ -203,7 +265,7 @@ class KRMRevoGameClientEvents {
                     double tz = player.getPersistentData().getDouble("RiderKickTargetZ");
                     if (tx != 0 || ty != 0 || tz != 0) {
                         double dx = tx - localPlayer.getX();
-                        double dy = ty - localPlayer.getEyeY();
+                        double dy = (ty + 0.9D) - localPlayer.getEyeY(); // Aim at enemy torso/chest
                         double dz = tz - localPlayer.getZ();
                         double distHoriz = Math.sqrt(dx * dx + dz * dz);
                         float targetPitch = (float) (-(Mth.atan2(dy, distHoriz) * (180.0F / (float) Math.PI)));

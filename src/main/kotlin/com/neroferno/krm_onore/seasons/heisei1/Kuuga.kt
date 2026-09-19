@@ -44,7 +44,7 @@ object Kuuga {
                 finisher(
                     id = "mighty_kick",
                     type = FinisherType.RIDER_KICK,
-                    animation = "krm_revo:kick",
+                    animation = "krm_revo:rider_kick",
                     damage = 25.0f,
                     explosion = true,
                     explosionRadius = 3.0f,

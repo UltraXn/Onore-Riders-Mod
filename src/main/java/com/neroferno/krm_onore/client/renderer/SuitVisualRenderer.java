@@ -12,9 +12,30 @@ public class SuitVisualRenderer extends GeoArmorRenderer<SuitVisualItem> {
         ((SuitModel) this.getGeoModel()).setRenderer(this);
     }
 
+    private boolean isFirstPerson = false;
+    private net.minecraft.world.entity.HumanoidArm firstPersonArm = net.minecraft.world.entity.HumanoidArm.RIGHT;
+
+    public void setFirstPersonArm(net.minecraft.world.entity.HumanoidArm arm) {
+        this.isFirstPerson = true;
+        this.firstPersonArm = arm;
+    }
+
+    public void clearFirstPerson() {
+        this.isFirstPerson = false;
+    }
+
     @Override
     protected void applyBoneVisibilityBySlot(net.minecraft.world.entity.EquipmentSlot currentSlot) {
-        this.setAllVisible(true);
+        if (this.isFirstPerson) {
+            this.setAllVisible(false);
+            if (this.firstPersonArm == net.minecraft.world.entity.HumanoidArm.RIGHT) {
+                if (this.rightArm != null) this.rightArm.setHidden(false);
+            } else {
+                if (this.leftArm != null) this.leftArm.setHidden(false);
+            }
+        } else {
+            this.setAllVisible(true);
+        }
     }
 
     private static class SuitModel extends GeoModel<SuitVisualItem> {

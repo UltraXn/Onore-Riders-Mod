@@ -69,36 +69,28 @@ public class AbilityHelper {
         player.getPersistentData().putInt("RiderKickTicks", 0);
         player.getPersistentData().putInt("RiderKickHoverTicks", 0);
         player.getPersistentData().putBoolean("RiderKickFallImmunity", true);
+        player.getPersistentData().putBoolean("RiderKickAnimPlayed", false);
 
         // Store start position
         player.getPersistentData().putDouble("RiderKickStartX", player.getX());
         player.getPersistentData().putDouble("RiderKickStartY", player.getY());
         player.getPersistentData().putDouble("RiderKickStartZ", player.getZ());
 
-        // 1. Play the 'kick' animation for all tracking clients
+        // 1. Play complete Rider Kick animation (ground crouch -> high leap -> apex dive -> landing)
+        player.getPersistentData().putBoolean("RiderKickAnimPlayed", true);
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
-                new PlayerAnimationPacket(player.getId(), "kick"));
+                new PlayerAnimationPacket(player.getId(), "rider_kick"));
 
-        // 2. Play wind/electric launch sounds
+        // Play wind/electric launch sounds
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                 net.minecraft.sounds.SoundEvents.WIND_CHARGE_THROW, net.minecraft.sounds.SoundSource.PLAYERS, 2.0f, 0.6f);
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                 net.minecraft.sounds.SoundEvents.FIRECHARGE_USE, net.minecraft.sounds.SoundSource.PLAYERS, 1.5f, 0.8f);
 
-        // 3. Propel the player upwards and slightly forward in the direction they are looking
+        // 3. Propel the player upwards into the air (clean vertical leap of ~5-6 blocks)
         Vec3 lookVec = player.getLookAngle();
-        double horizontalScale = 0.45D;
-
-        // Find target first to determine leap dynamics
-        double dist = 10.0D; // Default fallback distance
-        LivingEntity target = findTarget(player);
-        if (target != null) {
-            dist = player.distanceTo(target);
-        }
-
-        // Scale vertical velocity between 0.6D (close range) and 1.5D (far range)
-        double verticalVelocity = 0.6D + (dist / 20.0D) * 0.9D;
-        if (verticalVelocity > 1.6D) verticalVelocity = 1.6D;
+        double horizontalScale = 0.15D; // Minor horizontal momentum so the jump is primarily vertical
+        double verticalVelocity = 1.25D; // Clean vertical leap ~5.5-6 blocks high
 
         Vec3 jumpVec = new Vec3(lookVec.x * horizontalScale, verticalVelocity, lookVec.z * horizontalScale);
         player.setDeltaMovement(jumpVec);
@@ -119,7 +111,7 @@ public class AbilityHelper {
     public static LivingEntity findTarget(Player player) {
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getLookAngle().normalize();
-        double range = 20.0D;
+        double range = 24.0D;
         AABB searchBox = player.getBoundingBox().inflate(range);
         List<LivingEntity> list = player.level().getEntitiesOfClass(LivingEntity.class, searchBox,
                 entity -> entity != player && entity.isAlive() && player.hasLineOfSight(entity));
@@ -135,8 +127,8 @@ public class AbilityHelper {
             Vec3 toTargetNorm = toTarget.normalize();
             double dot = lookVec.dot(toTargetNorm);
 
-            // 0.85 dot product corresponds to about ~30 degrees cone of vision. This is perfect for auto-lock!
-            if (dot > 0.85D) {
+            // 0.70 dot product corresponds to about ~45 degrees cone of vision.
+            if (dot > 0.70D) {
                 if (dist < closestDist) {
                     closestDist = dist;
                     closestTarget = target;
@@ -155,8 +147,8 @@ public class AbilityHelper {
             player.getPersistentData().putDouble("RiderKickTargetY", closestTarget.getY());
             player.getPersistentData().putDouble("RiderKickTargetZ", closestTarget.getZ());
 
-            // Freeze target's velocity immediately on the server
-            closestTarget.setDeltaMovement(Vec3.ZERO);
+            // Freeze target's horizontal velocity immediately on the server while letting gravity keep it grounded
+            closestTarget.setDeltaMovement(0, Math.min(0, closestTarget.getDeltaMovement().y), 0);
             closestTarget.hurtMarked = true;
             if (closestTarget instanceof net.minecraft.world.entity.Mob mob) {
                 mob.setNoAi(true);

@@ -36,4 +36,5 @@ build_out.txt
 *.log
 modrinth_versions.json
 versions.json
-.kotlin
+.kotlin
+*.class

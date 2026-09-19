@@ -25,7 +25,7 @@
   "gui.krm_revo.skill_tree.title":       "Driver Belt",
   "gui.krm_revo.skill_tree.close":       "Close",
   "gui.krm_revo.skill_tree.equip":       "Equip Belt",
-  "gui.krm_revo.skill_tree.unequip":     "Remove Belt",
+  "gui.krm_revo.skill_tree.unequip":     "Unequip",
   "gui.krm_revo.skill_tree.equip.tip":   "Click to equip the Driver Belt from your inventory.",
   "gui.krm_revo.skill_tree.unequip.tip": "Click to remove the Driver Belt (returned to inventory).",
   "gui.krm_revo.skill_tree.equip.none":  "You need a Driver Belt in your inventory.",

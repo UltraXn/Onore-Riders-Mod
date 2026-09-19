@@ -25,7 +25,7 @@
   "gui.krm_revo.skill_tree.title":       "Cinturón Driver",
   "gui.krm_revo.skill_tree.close":       "Cerrar",
   "gui.krm_revo.skill_tree.equip":       "Equipar Cinturón",
-  "gui.krm_revo.skill_tree.unequip":     "Quitar Cinturón",
+  "gui.krm_revo.skill_tree.unequip":     "Desequipar",
   "gui.krm_revo.skill_tree.equip.tip":   "Haz clic para equipar el Cinturón Driver desde tu inventario.",
   "gui.krm_revo.skill_tree.unequip.tip": "Haz clic para quitarte el Cinturón Driver (se devuelve al inventario).",
   "gui.krm_revo.skill_tree.equip.none":  "Necesitas un Cinturón Driver en tu inventario.",
