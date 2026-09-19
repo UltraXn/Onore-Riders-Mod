@@ -2,26 +2,43 @@ package com.neroferno.krm_revo.client.renderer;
 
 import com.neroferno.krm_revo.item.BeltItem;
 import net.minecraft.resources.ResourceLocation;
-import software.bernie.geckolib.model.DefaultedItemGeoModel;
+import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.renderer.GeoItemRenderer;
 
 /**
- * GeckoLib item renderer for the Driver Belt.
+ * GeckoLib item renderer for a Driver Belt (inventory icon, hand, ground).
  *
- * Uses DefaultedItemGeoModel which automatically resolves:
- *   - Model:     assets/krm_revo/geo/item/driver_belt.geo.json
- *   - Texture:   assets/krm_revo/textures/item/driver_belt.png
- *   - Animation: assets/krm_revo/animations/item/driver_belt.animation.json
+ * Generalized (previously hardcoded to Kuuga's driver_belt files): now takes
+ * the geo/texture/animation ResourceLocations as constructor params, so each
+ * Rider's BeltItem can supply its own handheld model instead of every belt
+ * rendering with Kuuga's mesh.
  *
- * The renderer is registered as the BEWLR (Block Entity Without Level Renderer)
- * for the BeltItem. NeoForge calls this instead of the standard flat item sprite.
+ * Reminder from the original driver_belt fix: the ARMOR geo
+ * (geo/item/*.geo.json) is offset for a player's waist and is NOT centered
+ * on the origin, so it will render invisible/mis-scaled if reused directly
+ * as the handheld/item geo. If arcle_driver.geo.json has the same problem,
+ * export a second, origin-centered variant (e.g.
+ * arcle_driver_handheld.geo.json) the same way driver_belt_handheld.geo.json
+ * was done, and pass that here instead.
  */
 public class BeltItemRenderer extends GeoItemRenderer<BeltItem> {
 
-    public BeltItemRenderer() {
-        super(new DefaultedItemGeoModel<>(
-                ResourceLocation.fromNamespaceAndPath("krm_revo", "driver_belt")
-        ));
+    public BeltItemRenderer(ResourceLocation geoModel, ResourceLocation texture, ResourceLocation animation) {
+        super(new GeoModel<BeltItem>() {
+            @Override
+            public ResourceLocation getModelResource(BeltItem animatable) {
+                return geoModel;
+            }
+
+            @Override
+            public ResourceLocation getTextureResource(BeltItem animatable) {
+                return texture;
+            }
+
+            @Override
+            public ResourceLocation getAnimationResource(BeltItem animatable) {
+                return animation;
+            }
+        });
     }
 }
-
