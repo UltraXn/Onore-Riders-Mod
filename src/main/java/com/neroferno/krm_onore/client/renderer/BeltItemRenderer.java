@@ -23,6 +23,14 @@ import software.bernie.geckolib.renderer.GeoItemRenderer;
  */
 public class BeltItemRenderer extends GeoItemRenderer<BeltItem> {
 
+    public BeltItemRenderer() {
+        this(
+            ResourceLocation.fromNamespaceAndPath("krm_revo", "geo/item/driver_belt_handheld.geo.json"),
+            ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/item/driver_belt.png"),
+            ResourceLocation.fromNamespaceAndPath("krm_revo", "animations/item/driver_belt.animation.json")
+        );
+    }
+
     public BeltItemRenderer(ResourceLocation geoModel, ResourceLocation texture, ResourceLocation animation) {
         super(new GeoModel<BeltItem>() {
             @Override
