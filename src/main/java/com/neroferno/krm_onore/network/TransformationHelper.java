@@ -1,23 +1,31 @@
 package com.neroferno.krm_onore.network;
 
 import com.neroferno.krm_onore.KRMRevoMod;
+import com.neroferno.krm_onore.attachment.ModAttachments;
 import com.neroferno.krm_onore.event.ModSounds;
+import com.neroferno.krm_onore.item.BeltItem;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.items.ItemStackHandler;
 
 /**
  * Server-side helper for toggling the player's transformation state.
- *
- * State is stored in the player's persistent data (NBT tag) under the key
- * "krm_revo:transformed". This is accessible from both client and server.
  */
 @SuppressWarnings("null")
 public class TransformationHelper {
 
     private static final String TAG_TRANSFORMED  = "krm_revo:transformed";
     private static final String TAG_LAST_TRANSFORM_TIME = "krm_revo:last_transform_time";
+
+    public static String getActiveRiderId(Player player) {
+        if (isBeltEquipped(player)) {
+            return "kuuga";
+        }
+        return null;
+    }
 
     /**
      * Returns true if the player is currently transformed.
@@ -52,7 +60,7 @@ public class TransformationHelper {
             KRMRevoMod.LOGGER.debug("{} transformed!", player.getName().getString());
             player.displayClientMessage(
                     Component.translatable("krm_revo.transform.on"), true); // true = action bar
-            
+
             // Play transformation sounds
             player.level().playSound(player, player.getX(), player.getY(), player.getZ(),
                     ModSounds.TRANSFORM.get(), SoundSource.PLAYERS, 1.0f, 1.0f);
@@ -74,13 +82,13 @@ public class TransformationHelper {
     }
 
     /**
-     * Returns true if the player has the Driver Belt equipped in the new Custom Rider Inventory.
+     * Returns true if the player has a recognized Driver Belt equipped in
+     * the Custom Rider Inventory — any registered Rider, not just Kuuga.
      */
     public static boolean isBeltEquipped(Player player) {
-        if (!player.hasData(com.neroferno.krm_onore.attachment.ModAttachments.RIDER_INVENTORY)) return false;
-        
-        net.neoforged.neoforge.items.ItemStackHandler inv = player.getData(com.neroferno.krm_onore.attachment.ModAttachments.RIDER_INVENTORY);
-        return inv.getStackInSlot(0).is(com.neroferno.krm_onore.item.ModItems.DRIVER_BELT.get());
+        if (!player.hasData(ModAttachments.RIDER_INVENTORY)) return false;
+        ItemStackHandler inv = player.getData(ModAttachments.RIDER_INVENTORY);
+        ItemStack beltStack = inv.getStackInSlot(0);
+        return !beltStack.isEmpty() && beltStack.getItem() instanceof BeltItem;
     }
 }
-

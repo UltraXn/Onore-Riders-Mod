@@ -38,18 +38,17 @@ public record SyncRiderStatePacket(int entityId, boolean isTransformed, boolean 
         context.enqueueWork(() -> {
             Minecraft mc = Minecraft.getInstance();
             if (mc.level == null) return;
-            
+
             Entity entity = mc.level.getEntity(packet.entityId());
             if (entity instanceof Player player) {
                 // Update persistent data for transformation
                 player.getPersistentData().putBoolean("krm_revo:transformed", packet.isTransformed());
                 player.getPersistentData().putInt("RiderKickState", packet.riderKickState());
                 player.getPersistentData().putInt("krm_revo:form", packet.form());
-                
+
                 // Update specific Rider Inventory for belt
                 ItemStackHandler inv = player.getData(ModAttachments.RIDER_INVENTORY);
                 if (packet.hasBelt()) {
-                    // Ensure it has a belt
                     if (inv.getStackInSlot(0).isEmpty()) {
                         inv.setStackInSlot(0, new ItemStack(com.neroferno.krm_onore.item.ModItems.DRIVER_BELT.get()));
                     }

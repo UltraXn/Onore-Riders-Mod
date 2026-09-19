@@ -1,6 +1,9 @@
 package com.neroferno.krm_onore.item;
 
 import com.neroferno.krm_onore.attachment.ModAttachments;
+import com.neroferno.krm_onore.client.renderer.BeltArmorRenderer;
+import com.neroferno.krm_onore.client.renderer.BeltItemRenderer;
+import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -20,25 +23,34 @@ import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * The KRM Driver Belt item with full GeckoLib 3D model support.
- *
- * It acts as a Curio accessory.
  */
 @SuppressWarnings("null")
 public class BeltItem extends Item implements GeoItem {
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private final String idleAnimation;
+    private final Supplier<BlockEntityWithoutLevelRenderer> rendererFactory;
+    private final Supplier<BeltArmorRenderer> armorRendererFactory;
 
     public BeltItem() {
-        super(new Item.Properties().stacksTo(1));
+        this("animation.driver_belt.idle",
+             BeltItemRenderer::new,
+             BeltArmorRenderer::new);
     }
 
-    /**
-     * Right-click with the belt in hand → equip it into the RIDER_INVENTORY slot (GUI belt slot).
-     * Does NOT trigger transformation; that still requires the keybind while equipped.
-     */
+    public BeltItem(String idleAnimation,
+                     Supplier<BlockEntityWithoutLevelRenderer> rendererFactory,
+                     Supplier<BeltArmorRenderer> armorRendererFactory) {
+        super(new Item.Properties().stacksTo(1));
+        this.idleAnimation = idleAnimation;
+        this.rendererFactory = rendererFactory;
+        this.armorRendererFactory = armorRendererFactory;
+    }
+
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         if (level.isClientSide()) {
@@ -48,13 +60,11 @@ public class BeltItem extends Item implements GeoItem {
         ItemStack beltStack = player.getItemInHand(hand);
         ItemStackHandler riderInv = player.getData(ModAttachments.RIDER_INVENTORY);
 
-        // Only equip if the slot is empty
         if (riderInv.getStackInSlot(0).isEmpty()) {
             riderInv.setStackInSlot(0, beltStack.copy());
             player.setItemInHand(hand, ItemStack.EMPTY);
             return InteractionResultHolder.consume(ItemStack.EMPTY);
         } else {
-            // Slot already has a belt
             if (player instanceof ServerPlayer sp) {
                 sp.sendSystemMessage(Component.translatable("krm_revo.belt.already_equipped"));
             }
@@ -65,17 +75,26 @@ public class BeltItem extends Item implements GeoItem {
     @Override
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
         consumer.accept(new IClientItemExtensions() {
+            private BlockEntityWithoutLevelRenderer renderer;
+
             @Override
-            public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                return new com.neroferno.krm_onore.client.renderer.BeltItemRenderer();
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (this.renderer == null) {
+                    this.renderer = rendererFactory != null ? rendererFactory.get() : new BeltItemRenderer();
+                }
+                return this.renderer;
             }
         });
+    }
+
+    public BeltArmorRenderer getArmorRenderer() {
+        return armorRendererFactory != null ? armorRendererFactory.get() : new BeltArmorRenderer();
     }
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(this, "idle_controller", 5, state -> {
-            state.getController().setAnimation(RawAnimation.begin().thenLoop("animation.driver_belt.idle"));
+            state.getController().setAnimation(RawAnimation.begin().thenLoop(idleAnimation));
             return PlayState.CONTINUE;
         }));
     }

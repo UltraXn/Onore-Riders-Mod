@@ -2,8 +2,9 @@
   "itemGroup.krm_revo": "Onore Rider",
 
   "item.krm_revo.driver_belt": "Cinturón Driver",
+  "item.krm_revo.arcle_driver": "Arcle Driver",
 
-  "krm_revo.curios.belt": "Ranura de Cinturón",
+  "krm_revo.curios.belt": "Ranura de Driver",
 
   "krm_revo.transform.on":  "¡Transformado!",
   "krm_revo.transform.off": "Transformación desactivada.",

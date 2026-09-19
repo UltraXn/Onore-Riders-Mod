@@ -1,7 +1,7 @@
 package com.neroferno.krm_onore.menu;
 
-import com.neroferno.krm_onore.item.ModItems;
 import com.neroferno.krm_onore.attachment.ModAttachments;
+import com.neroferno.krm_onore.item.BeltItem;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -42,7 +42,7 @@ public class RiderMenu extends AbstractContainerMenu {
         this.addSlot(new SlotItemHandler(riderInv, 0, 52, 165) {  // Driver Belt
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.is(ModItems.DRIVER_BELT.get());
+                return stack.getItem() instanceof BeltItem;
             }
         });
 

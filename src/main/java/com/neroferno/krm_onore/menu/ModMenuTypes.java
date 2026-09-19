@@ -11,9 +11,9 @@ public class ModMenuTypes {
     public static final DeferredRegister<MenuType<?>> MENUS =
             DeferredRegister.create(Registries.MENU, KRMRevoMod.MODID);
 
-    /** 
-     * RiderMenu extends ModularUIContainerMenu, so the factory signature must 
-     * match: (MenuType, int windowId, Inventory, FriendlyByteBuf).
+    /**
+     * RiderMenu extends the vanilla AbstractContainerMenu, so the factory
+     * signature must match: (MenuType, int windowId, Inventory, FriendlyByteBuf).
      */
     public static final DeferredHolder<MenuType<?>, MenuType<RiderMenu>> RIDER_MENU =
             MENUS.register("rider_menu", () -> IMenuTypeExtension.create(

@@ -1,6 +1,9 @@
 package com.neroferno.krm_onore.item;
 
 import com.neroferno.krm_onore.block.ModBlocks;
+import com.neroferno.krm_onore.client.renderer.BeltArmorRenderer;
+import com.neroferno.krm_onore.client.renderer.BeltItemRenderer;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -15,22 +18,32 @@ public class ModItems {
 
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems("krm_revo");
 
-    // â”€â”€â”€ Transformation Items â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Transformation Items ─────────────────────────────────────────────
 
     /**
-     * Server-side handler for the K-key transformation request.
-     * Uses the custom NBT belt-equipped flag.
-     * it grants access to the transformation UI (K key) and combat bonuses.
+     * The core transformation item.
      */
     public static final DeferredItem<BeltItem> DRIVER_BELT =
             ITEMS.register("driver_belt", BeltItem::new);
 
+    /**
+     * Kuuga's Arcle Driver item.
+     */
+    public static final DeferredItem<BeltItem> ARCLE_DRIVER =
+            ITEMS.register("arcle_driver", () -> new BeltItem(
+                    "animation.driver_belt.idle",
+                    () -> new BeltItemRenderer(
+                            ResourceLocation.fromNamespaceAndPath("krm_revo", "geo/item/arcle_driver_handheld.geo.json"),
+                            ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/item/driver_belt.png"),
+                            ResourceLocation.fromNamespaceAndPath("krm_revo", "animations/item/driver_belt.animation.json")
+                    ),
+                    () -> new BeltArmorRenderer()
+            ));
+
     public static final DeferredItem<SuitVisualItem> KUUGA_SUIT_VISUAL =
             ITEMS.register("kuuga_suit_visual", SuitVisualItem::new);
 
-    // â”€â”€â”€ Armor Items â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-
+    // ─── Armor Items ───────────────────────────────────────────────────────
 
     public static final DeferredItem<BlockItem> RESEARCHER_DESK_ITEM =
             ITEMS.register("researcher_desk", () -> new BlockItem(ModBlocks.RESEARCHER_DESK.get(), new Item.Properties()));
@@ -38,4 +51,3 @@ public class ModItems {
     public static final DeferredItem<BlockItem> MESA_DE_TRABAJO_ITEM =
             ITEMS.register("mesa_de_trabajo", () -> new BlockItem(ModBlocks.MESA_DE_TRABAJO.get(), new Item.Properties()));
 }
-

@@ -1,20 +1,20 @@
 package com.neroferno.krm_onore.client.renderer.layer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.neroferno.krm_onore.client.renderer.SuitVisualRenderer;
 import com.neroferno.krm_onore.item.ModItems;
+import com.neroferno.krm_onore.item.SuitVisualItem;
 import com.neroferno.krm_onore.network.TransformationHelper;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import com.neroferno.krm_onore.item.SuitVisualItem;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.resources.ResourceLocation;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 
 @SuppressWarnings({"null", "removal"})
 public class SuitRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
