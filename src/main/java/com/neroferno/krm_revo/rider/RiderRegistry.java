@@ -16,7 +16,7 @@ public class RiderRegistry {
 
     public static final RiderDefinition KUUGA = register(new RiderDefinition(
             "kuuga",
-            ModItems.DRIVER_BELT,
+            ModItems.ARCLE_DRIVER,
             ModItems.KUUGA_SUIT_VISUAL,
             ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/kuuga_suit.png"),
             List.of(new RiderKickAbility())
