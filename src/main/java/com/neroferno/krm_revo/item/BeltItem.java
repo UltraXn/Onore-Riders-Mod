@@ -1,6 +1,7 @@
 package com.neroferno.krm_revo.item;
 
 import com.neroferno.krm_revo.attachment.ModAttachments;
+import com.neroferno.krm_revo.client.renderer.BeltArmorRenderer;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,11 +27,12 @@ import java.util.function.Supplier;
 /**
  * The KRM Driver Belt item with full GeckoLib 3D model support.
  *
- * FIX: idle animation and custom renderer used to be hardcoded on this
- * class, so every Rider's belt rendered with Kuuga's model/animation
- * regardless of which Rider it actually belonged to. Both are now supplied
- * per-instance via the constructor, so each Rider registers its own
- * BeltItem with its own look.
+ * idle animation and both renderers (handheld item + on-body armor layer)
+ * are supplied per-instance via the constructor, so each Rider registers
+ * its own BeltItem with its own look — nothing here is hardcoded to
+ * Kuuga's driver_belt files anymore. This is what lets a second Driver
+ * (e.g. Agito's arcle_driver) use its own geo/arcletexture/json instead of
+ * inheriting Kuuga's.
  *
  * It acts as a Curio accessory.
  */
@@ -40,19 +42,26 @@ public class BeltItem extends Item implements GeoItem {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private final String idleAnimation;
     private final Supplier<BlockEntityWithoutLevelRenderer> rendererFactory;
+    private final Supplier<BeltArmorRenderer> armorRendererFactory;
 
     /**
-     * @param idleAnimation   GeckoLib animation name for this belt's idle loop,
-     *                        e.g. "animation.driver_belt.idle".
-     * @param rendererFactory supplies this belt's custom item renderer, e.g.
-     *                        {@code BeltItemRenderer::new}. Called lazily
-     *                        each time the client asks for a renderer, same
-     *                        as the old hardcoded behavior.
+     * @param idleAnimation        GeckoLib animation name for this belt's idle loop,
+     *                             e.g. "animation.driver_belt.idle" / "animation.arcle_driver.idle".
+     * @param rendererFactory      supplies this belt's handheld/inventory item renderer, e.g.
+     *                             {@code () -> new BeltItemRenderer(geo, texture, animation)}.
+     *                             Called lazily each time the client asks for a renderer.
+     * @param armorRendererFactory supplies this belt's on-body armor-layer renderer, e.g.
+     *                             {@code () -> new BeltArmorRenderer(geo, texture, animation)}.
+     *                             Used by BeltRenderLayer so the correct model is drawn on the
+     *                             player regardless of which Rider's belt is equipped.
      */
-    public BeltItem(String idleAnimation, Supplier<BlockEntityWithoutLevelRenderer> rendererFactory) {
+    public BeltItem(String idleAnimation,
+                     Supplier<BlockEntityWithoutLevelRenderer> rendererFactory,
+                     Supplier<BeltArmorRenderer> armorRendererFactory) {
         super(new Item.Properties().stacksTo(1));
         this.idleAnimation = idleAnimation;
         this.rendererFactory = rendererFactory;
+        this.armorRendererFactory = armorRendererFactory;
     }
 
     /**
@@ -90,6 +99,15 @@ public class BeltItem extends Item implements GeoItem {
                 return rendererFactory.get();
             }
         });
+    }
+
+    /**
+     * Used by BeltRenderLayer to draw whichever belt is actually equipped
+     * with its own model/texture/animation, instead of a single hardcoded
+     * renderer for every Rider's Driver.
+     */
+    public BeltArmorRenderer getArmorRenderer() {
+        return armorRendererFactory.get();
     }
 
     @Override
