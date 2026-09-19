@@ -31,5 +31,9 @@
   "gui.krm_revo.skill_tree.unequip.tip": "Click to remove the Driver Belt (returned to inventory).",
   "gui.krm_revo.skill_tree.equip.none":  "You need a Driver Belt in your inventory.",
   "chat.krm_revo.cooldown_actionbar": "cooldown %ss",
-  "chat.krm_revo.no_target_lock": "Riderkick requires a target in sight (max: 20 blocks)!"
+  "chat.krm_revo.no_target_lock": "Riderkick requires a target in sight (max: 20 blocks)!",
+  "chat.krm_revo.not_enough_energy": "Not enough Rider Energy for Riderkick! (Requires 30%)",
+  "krm_revo.transform.no_energy": "Rider Energy depleted! Rest or recover energy before transforming.",
+  "krm_revo.transform.exhausted": "Your Rider Energy reached 0! You detransformed from exhaustion.",
+  "krm_revo.energy.gauge": "Rider Energy"
 }

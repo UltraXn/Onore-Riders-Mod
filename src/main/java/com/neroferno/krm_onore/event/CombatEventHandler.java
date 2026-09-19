@@ -13,6 +13,13 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import com.neroferno.krm_onore.network.SyncRiderStatePacket;
 import com.neroferno.krm_onore.network.PlayerAnimationPacket;
+import com.neroferno.krm_onore.attachment.ModAttachments;
+import com.neroferno.krm_onore.attachment.RiderEnergyData;
+import com.neroferno.krm_onore.network.SyncRiderEnergyPacket;
+import net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
@@ -53,6 +60,14 @@ public class CombatEventHandler {
 
         // Attack must be unarmed (empty main hand)
         if (!attacker.getMainHandItem().isEmpty()) return;
+
+        // Transformed unarmed melee strike: gain +5.0f Rider Energy
+        RiderEnergyData attackerEnergy = attacker.getData(ModAttachments.RIDER_ENERGY);
+        attackerEnergy.gain(5.0f);
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(
+                attacker,
+                new SyncRiderEnergyPacket(attacker.getId(), attackerEnergy.getEnergy(), attackerEnergy.getMaxEnergy())
+        );
 
         int form = attacker.getPersistentData().getInt("krm_revo:form");
         float damage = form == 1 ? 6.0f : 12.0f; // Growing = 6.0, Mighty = 12.0
@@ -368,6 +383,75 @@ public class CombatEventHandler {
                     new SyncRiderStatePacket(player.getId(), isTransformed, hasBelt, riderKickState, form)
             );
         }
+
+        // Rider Energy management (every second / 20 ticks)
+        if (player.tickCount % 20 == 0) {
+            boolean isTransformed = TransformationHelper.isTransformed(player);
+            RiderEnergyData energy = player.getData(ModAttachments.RIDER_ENERGY);
+
+            if (isTransformed) {
+                // If transformed and energy <= 0, automatically detransform!
+                if (energy.getEnergy() <= 0.0f) {
+                    TransformationHelper.setTransformed(player, false);
+                    player.displayClientMessage(
+                            Component.translatable("krm_revo.transform.exhausted")
+                                    .withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
+                            true
+                    );
+                    boolean hasBelt = TransformationHelper.isBeltEquipped(player);
+                    int form = player.getPersistentData().getInt("krm_revo:form");
+
+                    PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                            new SyncRiderStatePacket(player.getId(), false, hasBelt, 0, form));
+                    PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                            new TransformVFXPacket(player.getX(), player.getY(), player.getZ(), false));
+                }
+            } else {
+                // Untransformed passive regeneration (+1.0f per second up to max)
+                if (energy.getEnergy() < energy.getMaxEnergy()) {
+                    energy.gain(1.0f);
+                    PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                            new SyncRiderEnergyPacket(player.getId(), energy.getEnergy(), energy.getMaxEnergy()));
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerWakeUp(PlayerWakeUpEvent event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide) return;
+
+        RiderEnergyData energy = player.getData(ModAttachments.RIDER_ENERGY);
+        energy.fill();
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(
+                player,
+                new SyncRiderEnergyPacket(player.getId(), energy.getEnergy(), energy.getMaxEnergy())
+        );
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide) return;
+
+        RiderEnergyData energy = player.getData(ModAttachments.RIDER_ENERGY);
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(
+                player,
+                new SyncRiderEnergyPacket(player.getId(), energy.getEnergy(), energy.getMaxEnergy())
+        );
+    }
+
+    @SubscribeEvent
+    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide) return;
+
+        RiderEnergyData energy = player.getData(ModAttachments.RIDER_ENERGY);
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(
+                player,
+                new SyncRiderEnergyPacket(player.getId(), energy.getEnergy(), energy.getMaxEnergy())
+        );
     }
 
     public static void releaseTarget(Player player) {

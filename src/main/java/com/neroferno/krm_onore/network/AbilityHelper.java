@@ -28,6 +28,16 @@ public class AbilityHelper {
         }
 
         if ("rider_kick".equals(abilityId)) {
+            // Check Rider Energy cost (30.0f)
+            com.neroferno.krm_onore.attachment.RiderEnergyData energyData = 
+                    player.getData(com.neroferno.krm_onore.attachment.ModAttachments.RIDER_ENERGY);
+            if (energyData.getEnergy() < 30.0f) {
+                MutableComponent msg = Component.translatable("chat.krm_revo.not_enough_energy");
+                msg.withStyle(ChatFormatting.RED, ChatFormatting.BOLD);
+                player.displayClientMessage(msg, true);
+                return;
+            }
+
             // Check if player has a valid target within range before executing
             if (!hasValidTarget(player)) {
                 MutableComponent msg = Component.translatable("chat.krm_revo.no_target_lock");
@@ -50,6 +60,13 @@ public class AbilityHelper {
                 player.displayClientMessage(msg, true);
                 return;
             }
+
+            // Consume energy and sync
+            energyData.consume(30.0f);
+            PacketDistributor.sendToPlayersTrackingEntityAndSelf(
+                    player,
+                    new SyncRiderEnergyPacket(player.getId(), energyData.getEnergy(), energyData.getMaxEnergy())
+            );
 
             executeRiderKick(player);
             // Apply a 10-second (200 ticks) cooldown to the Belt item visually

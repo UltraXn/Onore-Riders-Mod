@@ -93,6 +93,13 @@ public class ModNetwork {
                 SelectFormPacket.STREAM_CODEC,
                 ModNetwork::handleSelectFormPacket
         );
+
+        // Server -> Client: Sync Rider Energy
+        registrar.playToClient(
+                SyncRiderEnergyPacket.TYPE,
+                SyncRiderEnergyPacket.STREAM_CODEC,
+                SyncRiderEnergyPacket::handle
+        );
     }
 
     /**
@@ -118,6 +125,21 @@ public class ModNetwork {
                         true
                     );
                     return; // Abort transformation
+                }
+
+                // If currently untransformed and trying to transform, check if energy > 0
+                boolean isTransformedBefore = TransformationHelper.isTransformed(player);
+                if (!isTransformedBefore) {
+                    com.neroferno.krm_onore.attachment.RiderEnergyData energyData = 
+                            player.getData(com.neroferno.krm_onore.attachment.ModAttachments.RIDER_ENERGY);
+                    if (energyData.getEnergy() <= 0.0f) {
+                        player.displayClientMessage(
+                            net.minecraft.network.chat.Component.translatable("krm_revo.transform.no_energy")
+                                    .withStyle(net.minecraft.ChatFormatting.RED, net.minecraft.ChatFormatting.BOLD),
+                            true
+                        );
+                        return; // Abort transformation due to exhaustion
+                    }
                 }
                 
                 // Update the last transformation timestamp

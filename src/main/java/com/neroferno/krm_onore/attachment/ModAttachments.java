@@ -15,4 +15,8 @@ public class ModAttachments {
     // 1-slot inventory just for the Driver Belt
     public static final Supplier<AttachmentType<ItemStackHandler>> RIDER_INVENTORY = ATTACHMENT_TYPES.register("rider_inventory",
             () -> AttachmentType.serializable(() -> new ItemStackHandler(1)).copyOnDeath().build());
+
+    // Rider Energy (Henshin Gauge)
+    public static final Supplier<AttachmentType<RiderEnergyData>> RIDER_ENERGY = ATTACHMENT_TYPES.register("rider_energy",
+            () -> AttachmentType.serializable(RiderEnergyData::new).copyOnDeath().build());
 }

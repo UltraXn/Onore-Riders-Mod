@@ -119,6 +119,16 @@ public class KRMRevoModClient {
         }
         KRMRevoMod.LOGGER.info("Onore Rider — Custom Render Layers registered.");
     }
+
+    @SubscribeEvent
+    public static void onRegisterGuiLayers(net.neoforged.neoforge.client.event.RegisterGuiLayersEvent event) {
+        event.registerAbove(
+                net.neoforged.neoforge.client.gui.VanillaGuiLayers.EXPERIENCE_BAR,
+                ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "rider_energy_overlay"),
+                com.neroferno.krm_onore.client.gui.RiderEnergyOverlay::render
+        );
+        KRMRevoMod.LOGGER.info("Onore Rider — Custom GUI Layers registered.");
+    }
 }
 
 /**

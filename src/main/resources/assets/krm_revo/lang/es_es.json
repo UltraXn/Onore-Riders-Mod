@@ -31,5 +31,9 @@
   "gui.krm_revo.skill_tree.unequip.tip": "Haz clic para quitarte el Cinturón Driver (se devuelve al inventario).",
   "gui.krm_revo.skill_tree.equip.none":  "Necesitas un Cinturón Driver en tu inventario.",
   "chat.krm_revo.cooldown_actionbar": "cooldown %ss",
-  "chat.krm_revo.no_target_lock": "¡Riderkick requiere un objetivo en la mira (máx. 20 bloques)!"
+  "chat.krm_revo.no_target_lock": "¡Riderkick requiere un objetivo en la mira (máx. 20 bloques)!",
+  "chat.krm_revo.not_enough_energy": "¡No tienes suficiente Energía Rider para Riderkick! (Requiere 30%)",
+  "krm_revo.transform.no_energy": "¡Energía Rider agotada! Descansa o recupera energía para transformarte.",
+  "krm_revo.transform.exhausted": "¡Tu Energía Rider llegó a 0! Te has destransformado por agotamiento.",
+  "krm_revo.energy.gauge": "Energía Rider"
 }
