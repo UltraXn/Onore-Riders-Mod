@@ -53,7 +53,7 @@ public class AbilityHelper {
 
             executeRiderKick(player);
             // Apply a 10-second (200 ticks) cooldown to the Belt item visually
-            player.getCooldowns().addCooldown(ModItems.DRIVER_BELT.get(), 200);
+            player.getCooldowns().addCooldown(ModItems.ARCLE_DRIVER.get(), 200);
             player.getPersistentData().putLong("RiderKickCooldownEnd", now + 200);
         }
     }
