@@ -50,13 +50,12 @@ public class VillagerTradeHandler {
 
             // Level 5: Master
             List<VillagerTrades.ItemListing> level5 = event.getTrades().get(5);
-            // High-tier trade for the Driver Belt
+            // High-tier trade for the Arcle Driver
             level5.add(new BasicItemListing(
                     new ItemStack(Items.EMERALD, 64),
                     new ItemStack(Items.ECHO_SHARD, 1),
-                    ModItems.DRIVER_BELT.get().getDefaultInstance(),
+                    ModItems.ARCLE_DRIVER.get().getDefaultInstance(),
                     1, 30, 0.05f));
         }
     }
 }
-
