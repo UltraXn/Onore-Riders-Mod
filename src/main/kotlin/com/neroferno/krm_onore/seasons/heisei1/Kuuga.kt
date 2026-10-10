@@ -14,7 +14,7 @@ import com.neroferno.krm_onore.item.ModItems
 object Kuuga {
     val SERIES: RiderSeries = rider("kuuga") {
         era = RiderEra.HEISEI_PHASE_1
-        driverSupplier = ModItems.DRIVER_BELT
+        driverSupplier = ModItems.ARCLE_DRIVER
         defaultFormId = 1 // Growing Form
 
         forms {
