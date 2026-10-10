@@ -19,6 +19,9 @@ public class TransformationHelper {
 
     private static final String TAG_TRANSFORMED  = "krm_revo:transformed";
     private static final String TAG_LAST_TRANSFORM_TIME = "krm_revo:last_transform_time";
+    public static final String TAG_TRANSFORM_PENDING = "krm_revo:transform_pending";
+    public static final String TAG_TRANSFORM_TICKS_REMAINING = "krm_revo:transform_ticks_remaining";
+    public static final int TRANSFORM_ANIMATION_TICKS = 90;
 
     public static String getActiveRiderId(Player player) {
         if (isBeltEquipped(player)) {
@@ -82,8 +85,8 @@ public class TransformationHelper {
     }
 
     /**
-     * Returns true if the player has a recognized Driver Belt equipped in
-     * the Custom Rider Inventory — any registered Rider, not just Kuuga.
+     * Returns true if the player has the Arcle Driver equipped in the
+     * Custom Rider Inventory.
      */
     public static boolean isBeltEquipped(Player player) {
         if (!player.hasData(ModAttachments.RIDER_INVENTORY)) return false;
