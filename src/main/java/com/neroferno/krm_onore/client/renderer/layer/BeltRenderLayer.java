@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.neroferno.krm_onore.attachment.ModAttachments;
 import com.neroferno.krm_onore.client.renderer.BeltArmorRenderer;
 import com.neroferno.krm_onore.item.BeltItem;
+import com.neroferno.krm_onore.item.ModItems;
 import com.neroferno.krm_onore.network.TransformationHelper;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -25,7 +26,7 @@ public class BeltRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
 
     // Cached per belt Item (not per-frame) so every render call doesn't
     // rebuild a fresh GeckoLib renderer for whichever Driver is equipped
-    // (Kuuga's driver_belt, arcle_driver, etc.).
+    // (currently the Arcle Driver).
     private final Map<Item, BeltArmorRenderer> rendererCache = new IdentityHashMap<>();
 
     public BeltRenderLayer(RenderLayerParent<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> pRenderer) {
@@ -52,21 +53,57 @@ public class BeltRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
         // Ask the equipped belt for its own armor renderer or fallback to default BeltArmorRenderer
         BeltArmorRenderer beltRenderer = rendererCache.computeIfAbsent(beltItem, item -> beltItem.getArmorRenderer());
 
-        beltRenderer.prepForRender(player, beltStack, EquipmentSlot.LEGS, model);
+        ResourceLocation textureRes = BeltArmorRenderer.getBeltTextureForPlayer(player, beltItem);
+        beltRenderer.renderWithTexture(player, beltStack, model, EquipmentSlot.LEGS, poseStack, buffer,
+                partialTick, packedLight, textureRes, 1.0F, false);
+
+        if (beltItem == ModItems.ARCLE_DRIVER.get()) {
+            if (transformed && player.getPersistentData().getInt("krm_revo:form") == 1) {
+                float progress = getGrowingCoreTransitionProgress(player, partialTick);
+                if (progress < 1.0F) {
+                    beltRenderer.renderWithTexture(player, beltStack, model, EquipmentSlot.LEGS, poseStack, buffer,
+                            partialTick, packedLight, getCoreTexture("off"), 1.0F - progress, true);
+                }
+                beltRenderer.renderWithTexture(player, beltStack, model, EquipmentSlot.LEGS, poseStack, buffer,
+                        partialTick, packedLight, getCoreTexture("growing"), progress, true);
+            } else {
+                ResourceLocation coreTexture = getCoreTextureForPlayer(player);
+                beltRenderer.renderWithTexture(player, beltStack, model, EquipmentSlot.LEGS, poseStack, buffer,
+                        partialTick, packedLight, coreTexture, 1.0F, true);
+            }
+        }
 
         if (transformed) {
             model.setAllVisible(false);
         }
 
-        ResourceLocation textureRes = BeltArmorRenderer.getBeltTextureForPlayer(player);
-        net.minecraft.client.renderer.RenderType renderType = beltRenderer.getRenderType(
-                beltItem,
-                textureRes,
-                buffer, partialTick);
-        com.mojang.blaze3d.vertex.VertexConsumer vertexConsumer = buffer.getBuffer(renderType);
-
-        beltRenderer.renderToBuffer(poseStack, vertexConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
-
         poseStack.popPose();
+    }
+
+    private static float getGrowingCoreTransitionProgress(AbstractClientPlayer player, float partialTick) {
+        if (!player.getPersistentData().getBoolean("krm_revo:has_transform_start_tick")) {
+            return 1.0F;
+        }
+        long startTick = player.getPersistentData().getLong("krm_revo:transform_start_tick");
+        return Math.min(1.0F, Math.max(0.0F, (player.tickCount + partialTick - startTick) / 12.0F));
+    }
+
+    private static ResourceLocation getCoreTextureForPlayer(AbstractClientPlayer player) {
+        String coreTexture = "off";
+        if (TransformationHelper.isTransformed(player)) {
+            coreTexture = switch (player.getPersistentData().getInt("krm_revo:form")) {
+                case 1 -> "growing";
+                case 2 -> "mighty";
+                case 3 -> "dragon";
+                case 4 -> "pegasus";
+                case 5 -> "titan";
+                default -> "off";
+            };
+        }
+        return getCoreTexture(coreTexture);
+    }
+
+    private static ResourceLocation getCoreTexture(String form) {
+        return ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/item/arcle_core_" + form + ".png");
     }
 }
