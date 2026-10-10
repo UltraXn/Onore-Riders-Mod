@@ -42,6 +42,19 @@ public class SuitRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
         parentModel.setAllVisible(false);
         
         int form = player.getPersistentData().getInt("krm_revo:form");
+        if (form == 1) {
+            long transformStartTick = player.getPersistentData().getLong("krm_revo:transform_start_tick");
+            if (!player.getPersistentData().getBoolean("krm_revo:has_transform_start_tick")) {
+                transformStartTick = player.tickCount;
+                player.getPersistentData().putLong("krm_revo:transform_start_tick", transformStartTick);
+                player.getPersistentData().putBoolean("krm_revo:has_transform_start_tick", true);
+            }
+            float elapsedTicks = (float) (player.tickCount + partialTick - transformStartTick);
+            this.renderer.setGrowingRevealProgress(elapsedTicks);
+        } else {
+            this.renderer.clearGrowingRevealProgress();
+        }
+
         ResourceLocation textureRes = form == 1 
             ? ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/growing_suit.png") 
             : ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/kuuga_suit.png");

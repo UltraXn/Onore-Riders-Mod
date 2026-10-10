@@ -22,7 +22,7 @@ public class AnimationHandler {
     /**
      * Plays a specific animation on a player.
      * @param playerId The entity ID of the player.
-     * @param animName The name of the animation (e.g. "transform").
+     * @param animName The animation key declared inside its JSON file (e.g. "kuuga_transform").
      */
     public static void playAnimation(int playerId, String animName) {
         Minecraft mc = Minecraft.getInstance();
@@ -68,4 +68,3 @@ public class AnimationHandler {
         }
     }
 }
-

@@ -39,7 +39,7 @@ public class RiderMenu extends AbstractContainerMenu {
         this.addSlot(new SlotItemHandler(armorInv, 1, 22, 165)); // Leggings
         this.addSlot(new SlotItemHandler(armorInv, 0, 52, 125)); // Boots
         this.addSlot(new SlotItemHandler(offhandInv, 0, 52, 145)); // Offhand
-        this.addSlot(new SlotItemHandler(riderInv, 0, 52, 165) {  // Driver Belt
+        this.addSlot(new SlotItemHandler(riderInv, 0, 52, 165) {  // Arcle Driver
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.getItem() instanceof BeltItem;

@@ -66,7 +66,7 @@ public class ModNetwork {
                 SyncRiderStatePacket::handle
         );
 
-        // Client -> Server: Unequip the Driver Belt from Rider Inventory
+        // Client -> Server: Unequip the Arcle Driver from Rider Inventory
         registrar.playToServer(
                 UnequipBeltPacket.TYPE,
                 UnequipBeltPacket.STREAM_CODEC,
@@ -114,7 +114,11 @@ public class ModNetwork {
 
             // Check if the belt is equipped via our custom system
             if (TransformationHelper.isBeltEquipped(player)) {
-                
+                if (!TransformationHelper.isTransformed(player)
+                        && player.getPersistentData().getBoolean(TransformationHelper.TAG_TRANSFORM_PENDING)) {
+                    return;
+                }
+
                 // Enforce a 3-second (60 ticks) cooldown
                 long currentTime = player.level().getGameTime();
                 long lastTime = TransformationHelper.getLastTransformTime(player);
@@ -142,38 +146,49 @@ public class ModNetwork {
                     }
                 }
                 
-                // Update the last transformation timestamp
-                TransformationHelper.setLastTransformTime(player, currentTime);
+                if (TransformationHelper.isTransformed(player)) {
+                    TransformationHelper.setLastTransformTime(player, currentTime);
+                    TransformationHelper.toggleTransformation(player);
+                    syncTransformationState(player, false);
+                } else {
+                    player.getPersistentData().putBoolean(TransformationHelper.TAG_TRANSFORM_PENDING, true);
+                    player.getPersistentData().putInt(
+                            TransformationHelper.TAG_TRANSFORM_TICKS_REMAINING,
+                            TransformationHelper.TRANSFORM_ANIMATION_TICKS
+                    );
 
-                TransformationHelper.toggleTransformation(player);
-
-                boolean isTransformed = TransformationHelper.isTransformed(player);
-                boolean hasBelt = TransformationHelper.isBeltEquipped(player);
-                int riderKickState = player.getPersistentData().getInt("RiderKickState");
-                int form = player.getPersistentData().getInt("krm_revo:form");
-
-                // Sync the state immediately to all clients to avoid 10-tick lag
-                net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
-                        new SyncRiderStatePacket(player.getId(), isTransformed, hasBelt, riderKickState, form));
-
-                // Broadcast VFX packet to all nearby players
-                net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
-                        new TransformVFXPacket(
-                                player.getX(), player.getY(), player.getZ(),
-                                isTransformed
-                        ));
-
-                // Broadcast animation packet
-                net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
-                        new PlayerAnimationPacket(player.getId(), "transform"));
+                    // Keep the suit hidden until the full player animation has finished.
+                    net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                            new PlayerAnimationPacket(player.getId(), "kuuga_transform"));
+                }
             } else {
                 player.displayClientMessage(
                         net.minecraft.network.chat.Component.translatable("krm_revo.transform.no_belt"),
                         true
                 );
-                KRMRevoMod.LOGGER.debug("{} tried to transform without a Driver Belt.", player.getName().getString());
+                KRMRevoMod.LOGGER.debug("{} tried to transform without the Arcle Driver.", player.getName().getString());
             }
         });
+    }
+
+    public static void completeTransformation(ServerPlayer player) {
+        if (!player.isAlive() || !TransformationHelper.isBeltEquipped(player)) return;
+
+        TransformationHelper.setLastTransformTime(player, player.level().getGameTime());
+        TransformationHelper.toggleTransformation(player);
+        syncTransformationState(player, true);
+    }
+
+    private static void syncTransformationState(ServerPlayer player, boolean transforming) {
+        boolean isTransformed = TransformationHelper.isTransformed(player);
+        boolean hasBelt = TransformationHelper.isBeltEquipped(player);
+        int riderKickState = player.getPersistentData().getInt("RiderKickState");
+        int form = player.getPersistentData().getInt("krm_revo:form");
+
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                new SyncRiderStatePacket(player.getId(), isTransformed, hasBelt, riderKickState, form));
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                new TransformVFXPacket(player.getX(), player.getY(), player.getZ(), transforming));
     }
 
     /**

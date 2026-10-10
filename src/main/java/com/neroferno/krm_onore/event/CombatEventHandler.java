@@ -5,6 +5,10 @@ import com.neroferno.krm_onore.network.ImpactVFXPacket;
 import com.neroferno.krm_onore.network.TransformationHelper;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -36,7 +40,8 @@ import java.util.List;
  * Handles KRM-modified combat behavior.
  *
  * While transformed and attacking with an EMPTY hand:
- *   - Base damage is set to 8.0 (Iron Sword equivalent + bonus)
+ *   - Growing Form deals 2.0 damage; other forms deal 12.0
+ *   - Growing Form grants 15 armor points while active
  *   - Knockback is increased
  *
  *
@@ -47,6 +52,9 @@ import java.util.List;
 @EventBusSubscriber(modid = KRMRevoMod.MODID)
 public class CombatEventHandler {
 
+    private static final ResourceLocation GROWING_FORM_ARMOR_ID =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "growing_form_armor");
+    private static final double GROWING_FORM_ARMOR_BONUS = 15.0D;
 
     @SubscribeEvent
     public static void onLivingDamage(LivingDamageEvent.Pre event) {
@@ -70,7 +78,7 @@ public class CombatEventHandler {
         );
 
         int form = attacker.getPersistentData().getInt("krm_revo:form");
-        float damage = form == 1 ? 6.0f : 12.0f; // Growing = 6.0, Mighty = 12.0
+        float damage = form == 1 ? 2.0f : 12.0f; // Growing = 2.0, other forms = 12.0
         event.setNewDamage(damage);
 
         LivingEntity victim = event.getEntity();
@@ -120,6 +128,26 @@ public class CombatEventHandler {
         if (event.getEntity().level().isClientSide) return;
 
         Player player = event.getEntity();
+        if (player.getPersistentData().getBoolean(TransformationHelper.TAG_TRANSFORM_PENDING)) {
+            if (!player.isAlive() || !TransformationHelper.isBeltEquipped(player)) {
+                player.getPersistentData().putBoolean(TransformationHelper.TAG_TRANSFORM_PENDING, false);
+                player.getPersistentData().putInt(TransformationHelper.TAG_TRANSFORM_TICKS_REMAINING, 0);
+            } else {
+                int remaining = player.getPersistentData().getInt(
+                        TransformationHelper.TAG_TRANSFORM_TICKS_REMAINING
+                ) - 1;
+                player.getPersistentData().putInt(
+                        TransformationHelper.TAG_TRANSFORM_TICKS_REMAINING,
+                        Math.max(remaining, 0)
+                );
+                if (remaining <= 0 && player instanceof ServerPlayer serverPlayer) {
+                    player.getPersistentData().putBoolean(TransformationHelper.TAG_TRANSFORM_PENDING, false);
+                    com.neroferno.krm_onore.network.ModNetwork.completeTransformation(serverPlayer);
+                }
+            }
+        }
+
+        updateGrowingFormArmor(player);
         int state = player.getPersistentData().getInt("RiderKickState");
 
         if (state > 0) {
@@ -454,6 +482,26 @@ public class CombatEventHandler {
         );
     }
 
+    private static void updateGrowingFormArmor(Player player) {
+        AttributeInstance armor = player.getAttribute(Attributes.ARMOR);
+        if (armor == null) return;
+
+        boolean shouldHaveBonus = TransformationHelper.isTransformed(player)
+                && TransformationHelper.isBeltEquipped(player)
+                && player.getPersistentData().getInt("krm_revo:form") == 1;
+        boolean hasBonus = armor.hasModifier(GROWING_FORM_ARMOR_ID);
+
+        if (shouldHaveBonus && !hasBonus) {
+            armor.addTransientModifier(new AttributeModifier(
+                    GROWING_FORM_ARMOR_ID,
+                    GROWING_FORM_ARMOR_BONUS,
+                    AttributeModifier.Operation.ADD_VALUE
+            ));
+        } else if (!shouldHaveBonus && hasBonus) {
+            armor.removeModifier(GROWING_FORM_ARMOR_ID);
+        }
+    }
+
     public static void releaseTarget(Player player) {
         int targetId = player.getPersistentData().getInt("RiderKickTargetId");
         if (targetId != 0) {
@@ -484,4 +532,3 @@ public class CombatEventHandler {
         );
     }
 }
-

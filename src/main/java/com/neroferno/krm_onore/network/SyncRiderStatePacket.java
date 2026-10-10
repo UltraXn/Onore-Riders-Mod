@@ -42,6 +42,11 @@ public record SyncRiderStatePacket(int entityId, boolean isTransformed, boolean 
             Entity entity = mc.level.getEntity(packet.entityId());
             if (entity instanceof Player player) {
                 // Update persistent data for transformation
+                boolean wasTransformed = player.getPersistentData().getBoolean("krm_revo:transformed");
+                if (packet.isTransformed() && !wasTransformed) {
+                    player.getPersistentData().putLong("krm_revo:transform_start_tick", player.tickCount);
+                    player.getPersistentData().putBoolean("krm_revo:has_transform_start_tick", true);
+                }
                 player.getPersistentData().putBoolean("krm_revo:transformed", packet.isTransformed());
                 player.getPersistentData().putInt("RiderKickState", packet.riderKickState());
                 player.getPersistentData().putInt("krm_revo:form", packet.form());
@@ -50,7 +55,7 @@ public record SyncRiderStatePacket(int entityId, boolean isTransformed, boolean 
                 ItemStackHandler inv = player.getData(ModAttachments.RIDER_INVENTORY);
                 if (packet.hasBelt()) {
                     if (inv.getStackInSlot(0).isEmpty()) {
-                        inv.setStackInSlot(0, new ItemStack(com.neroferno.krm_onore.item.ModItems.DRIVER_BELT.get()));
+                        inv.setStackInSlot(0, new ItemStack(com.neroferno.krm_onore.item.ModItems.ARCLE_DRIVER.get()));
                     }
                 } else {
                     // Clear the belt slot

@@ -39,7 +39,6 @@ public class KRMRevoMod {
                     .withTabsBefore(CreativeModeTabs.COMBAT)
                     .icon(() -> ModItems.ARCLE_DRIVER.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
-                        output.accept(ModItems.DRIVER_BELT.get());
                         output.accept(ModItems.ARCLE_DRIVER.get());
                         output.accept(ModItems.RESEARCHER_DESK_ITEM.get());
                         output.accept(ModItems.MESA_DE_TRABAJO_ITEM.get());
@@ -73,4 +72,3 @@ public class KRMRevoMod {
                 com.neroferno.krm_onore.engine.RiderRegistry.getAll().size());
     }
 }
-
