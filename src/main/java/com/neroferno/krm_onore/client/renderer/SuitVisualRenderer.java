@@ -19,17 +19,50 @@ public class SuitVisualRenderer extends GeoArmorRenderer<SuitVisualItem> {
     }
 
     public void setGrowingRevealProgress(float progress) {
-        this.growingRevealProgress = progress;
+        if (!this.isFirstPerson) {
+            this.growingRevealProgress = progress;
+        }
     }
 
     public void clearGrowingRevealProgress() {
-        this.growingRevealProgress = null;
+        if (this.growingRevealProgress != null) {
+            this.growingRevealProgress = null;
+            resetAllBoneScales();
+        }
+    }
+
+    public void resetAllBoneScales() {
+        GeoModel<SuitVisualItem> model = this.getGeoModel();
+        if (model != null) {
+            resetBone(model, "armorBody");
+            resetBone(model, "armorLeftArm");
+            resetBone(model, "armorRightArm");
+            resetBone(model, "armorLeftLeg");
+            resetBone(model, "armorRightLeg");
+            resetBone(model, "armorHead");
+        }
+    }
+
+    private static void resetBone(GeoModel<SuitVisualItem> model, String boneName) {
+        model.getBone(boneName).ifPresent(bone -> {
+            bone.setHidden(false);
+            bone.updateScale(1.0F, 1.0F, 1.0F);
+        });
     }
 
     private void applyGrowingReveal(GeoModel<SuitVisualItem> model) {
+        if (this.isFirstPerson) {
+            clearGrowingRevealProgress();
+            return;
+        }
         if (this.growingRevealProgress == null) return;
 
         float elapsed = this.growingRevealProgress;
+        if (elapsed >= REVEAL_INTERVAL_TICKS * 3.0F + REVEAL_DURATION_TICKS) {
+            clearGrowingRevealProgress();
+            return;
+        }
+
         applyBoneReveal(model, "armorBody", elapsed, 0.0F);
         applyBoneReveal(model, "armorLeftArm", elapsed, REVEAL_INTERVAL_TICKS);
         applyBoneReveal(model, "armorRightArm", elapsed, REVEAL_INTERVAL_TICKS);
@@ -58,10 +91,12 @@ public class SuitVisualRenderer extends GeoArmorRenderer<SuitVisualItem> {
     public void setFirstPersonArm(net.minecraft.world.entity.HumanoidArm arm) {
         this.isFirstPerson = true;
         this.firstPersonArm = arm;
+        clearGrowingRevealProgress();
     }
 
     public void clearFirstPerson() {
         this.isFirstPerson = false;
+        resetAllBoneScales();
     }
 
     @Override
@@ -69,9 +104,15 @@ public class SuitVisualRenderer extends GeoArmorRenderer<SuitVisualItem> {
         if (this.isFirstPerson) {
             this.setAllVisible(false);
             if (this.firstPersonArm == net.minecraft.world.entity.HumanoidArm.RIGHT) {
-                if (this.rightArm != null) this.rightArm.setHidden(false);
+                if (this.rightArm != null) {
+                    this.rightArm.setHidden(false);
+                    this.rightArm.updateScale(1.0F, 1.0F, 1.0F);
+                }
             } else {
-                if (this.leftArm != null) this.leftArm.setHidden(false);
+                if (this.leftArm != null) {
+                    this.leftArm.setHidden(false);
+                    this.leftArm.updateScale(1.0F, 1.0F, 1.0F);
+                }
             }
         } else {
             this.setAllVisible(true);

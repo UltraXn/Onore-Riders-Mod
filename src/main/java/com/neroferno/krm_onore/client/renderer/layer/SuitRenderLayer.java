@@ -39,7 +39,6 @@ public class SuitRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
         PlayerModel<AbstractClientPlayer> parentModel = this.getParentModel();
         parentModel.setAllVisible(true);
         this.renderer.prepForRender(player, dummySuitStack, EquipmentSlot.CHEST, parentModel);
-        parentModel.setAllVisible(false);
         
         int form = player.getPersistentData().getInt("krm_revo:form");
         if (form == 1) {
@@ -50,9 +49,34 @@ public class SuitRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
                 player.getPersistentData().putBoolean("krm_revo:has_transform_start_tick", true);
             }
             float elapsedTicks = (float) (player.tickCount + partialTick - transformStartTick);
-            this.renderer.setGrowingRevealProgress(elapsedTicks);
+            if (elapsedTicks < 12.0F) {
+                this.renderer.setGrowingRevealProgress(elapsedTicks);
+                // Keep the limbs visible until each armor bone has scaled into place to prevent flickering gaps
+                parentModel.setAllVisible(true);
+                if (elapsedTicks >= 0.0F) parentModel.body.visible = false;
+                if (elapsedTicks >= 3.0F) {
+                    parentModel.leftArm.visible = false;
+                    parentModel.rightArm.visible = false;
+                    parentModel.leftSleeve.visible = false;
+                    parentModel.rightSleeve.visible = false;
+                }
+                if (elapsedTicks >= 6.0F) {
+                    parentModel.leftLeg.visible = false;
+                    parentModel.rightLeg.visible = false;
+                    parentModel.leftPants.visible = false;
+                    parentModel.rightPants.visible = false;
+                }
+                if (elapsedTicks >= 9.0F) {
+                    parentModel.head.visible = false;
+                    parentModel.hat.visible = false;
+                }
+            } else {
+                this.renderer.clearGrowingRevealProgress();
+                parentModel.setAllVisible(false);
+            }
         } else {
             this.renderer.clearGrowingRevealProgress();
+            parentModel.setAllVisible(false);
         }
 
         ResourceLocation textureRes = form == 1 

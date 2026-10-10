@@ -58,6 +58,9 @@ public class BeltRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
                 partialTick, packedLight, textureRes, 1.0F, false);
 
         if (beltItem == ModItems.ARCLE_DRIVER.get()) {
+            poseStack.pushPose();
+            // Micro-inflation to prevent Z-fighting between base belt mesh and translucent core texture overlay
+            poseStack.scale(1.0015F, 1.0015F, 1.0015F);
             if (transformed && player.getPersistentData().getInt("krm_revo:form") == 1) {
                 float progress = getGrowingCoreTransitionProgress(player, partialTick);
                 if (progress < 1.0F) {
@@ -71,6 +74,7 @@ public class BeltRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
                 beltRenderer.renderWithTexture(player, beltStack, model, EquipmentSlot.LEGS, poseStack, buffer,
                         partialTick, packedLight, coreTexture, 1.0F, true);
             }
+            poseStack.popPose();
         }
 
         if (transformed) {

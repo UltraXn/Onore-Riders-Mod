@@ -2,6 +2,7 @@ package com.neroferno.krm_onore.client.renderer;
 
 import com.neroferno.krm_onore.item.BeltItem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -34,7 +35,9 @@ public class BeltArmorRenderer extends GeoArmorRenderer<BeltItem> {
         this.translucentPass = translucent;
         try {
             prepForRender(entity, stack, slot, playerModel);
-            renderToBuffer(poseStack, null, packedLight, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+            RenderType renderType = getRenderType((BeltItem) stack.getItem(), texture, buffer, partialTick);
+            VertexConsumer vertexConsumer = buffer.getBuffer(renderType);
+            renderToBuffer(poseStack, vertexConsumer, packedLight, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
         } finally {
             this.renderTextureOverride = null;
             this.renderAlpha = 1.0F;

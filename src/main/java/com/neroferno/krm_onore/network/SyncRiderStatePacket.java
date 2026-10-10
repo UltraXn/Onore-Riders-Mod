@@ -44,8 +44,14 @@ public record SyncRiderStatePacket(int entityId, boolean isTransformed, boolean 
                 // Update persistent data for transformation
                 boolean wasTransformed = player.getPersistentData().getBoolean("krm_revo:transformed");
                 if (packet.isTransformed() && !wasTransformed) {
-                    player.getPersistentData().putLong("krm_revo:transform_start_tick", player.tickCount);
-                    player.getPersistentData().putBoolean("krm_revo:has_transform_start_tick", true);
+                    if (player.tickCount > 5) {
+                        player.getPersistentData().putLong("krm_revo:transform_start_tick", player.tickCount);
+                        player.getPersistentData().putBoolean("krm_revo:has_transform_start_tick", true);
+                    } else {
+                        // Player was already transformed prior to joining the world; mark reveal completed
+                        player.getPersistentData().putLong("krm_revo:transform_start_tick", player.tickCount - 100);
+                        player.getPersistentData().putBoolean("krm_revo:has_transform_start_tick", true);
+                    }
                 }
                 player.getPersistentData().putBoolean("krm_revo:transformed", packet.isTransformed());
                 player.getPersistentData().putInt("RiderKickState", packet.riderKickState());
