@@ -12,7 +12,7 @@ import java.util.function.Supplier;
 public class ModAttachments {
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES = DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, KRMRevoMod.MODID);
 
-    // 1-slot inventory just for the Driver Belt
+    // 1-slot inventory for the equipped Rider driver.
     public static final Supplier<AttachmentType<ItemStackHandler>> RIDER_INVENTORY = ATTACHMENT_TYPES.register("rider_inventory",
             () -> AttachmentType.serializable(() -> new ItemStackHandler(1)).copyOnDeath().build());
 }
