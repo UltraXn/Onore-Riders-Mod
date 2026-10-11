@@ -3,6 +3,10 @@ plugins {
     id 'maven-publish'
     id 'net.neoforged.gradle.userdev' version '7.1.39'
     id 'org.jetbrains.kotlin.jvm' version '2.0.21'
+    id 'org.sonarqube' version '5.1.0.4882'
+    id 'com.diffplug.spotless' version '7.0.2'
+    id 'com.github.spotbugs' version '6.1.7'
+    id 'net.ltgt.errorprone' version '4.1.0'
 }
 
 tasks.named('wrapper', Wrapper).configure {
@@ -21,13 +25,13 @@ repositories {
     // GeckoLib - confirmed from https://wiki.geckolib.com
     maven {
         name = 'GeckoLib'
-        url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+        url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
         content { includeGroup("software.bernie.geckolib") }
     }
     // Better Combat - Modrinth Maven
     maven {
         name = 'Modrinth'
-        url 'https://api.modrinth.com/maven'
+        url = 'https://api.modrinth.com/maven'
         content { includeGroup("maven.modrinth") }
     }
     // PlayerAnimator - for custom player animations
@@ -128,6 +132,9 @@ dependencies {
     implementation "maven.modrinth:better-combat:2.3.1+1.21.1-neoforge"
     // PlayerAnimator: Custom player animations (.json)
     implementation "dev.kosmx.player-anim:player-animation-lib-forge:2.0.4+1.21.1"
+
+    // Google Error Prone
+    errorprone "com.google.errorprone:error_prone_core:2.36.0"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
@@ -161,13 +168,17 @@ publishing {
     }
     repositories {
         maven {
-            url "file://${project.projectDir}/repo"
+            url = "file://${project.projectDir}/repo"
         }
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+    options.errorprone {
+        disableWarningsInGeneratedCode = true
+        allErrorsAsWarnings = true
+    }
 }
 
 // IDEA no longer automatically downloads sources/javadoc jars for dependencies, so we need to explicitly enable the behavior.
@@ -177,3 +188,57 @@ idea {
         downloadJavadoc = true
     }
 }
+
+// SonarQube Configuration
+sonar {
+    properties {
+        property "sonar.projectKey", "krm-revolution"
+        property "sonar.projectName", "KRM - REvolution"
+        property "sonar.host.url", "http://localhost:9000"
+        property "sonar.sources", "src/main/java,src/main/kotlin"
+        property "sonar.sourceEncoding", "UTF-8"
+    }
+}
+
+// Spotless Code Formatter & Linter
+spotless {
+    java {
+        target 'src/main/java/**/*.java'
+        toggleOffOn()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    kotlin {
+        target 'src/main/kotlin/**/*.kt'
+        ktlint('1.3.1')
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    format 'json', {
+        target 'src/main/resources/**/*.json'
+        simple().indentWithSpaces(2)
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+// SpotBugs Static Analysis for Bug Detection
+spotbugs {
+    ignoreFailures = true
+    effort = 'max'
+    reportLevel = 'medium'
+}
+
+spotbugsMain {
+    reports {
+        html {
+            required = true
+            outputLocation = layout.buildDirectory.file("reports/spotbugs/main.html")
+        }
+        xml {
+            required = false
+        }
+    }
+}
+
