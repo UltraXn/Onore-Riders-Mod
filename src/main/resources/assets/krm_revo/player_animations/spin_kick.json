@@ -3,7 +3,7 @@
   "animations": {
     "spin_kick": {
       "animation_length": 0.65,
-      "loop": true,
+      "loop": false,
       "bones": {
         "torso": {
           "rotation": {
@@ -525,7 +525,7 @@
     },
     "animation.spin_kick": {
       "animation_length": 0.65,
-      "loop": true,
+      "loop": false,
       "bones": {
         "torso": {
           "rotation": {
@@ -1047,7 +1047,7 @@
     },
     "animation.krm_revo.spin_kick": {
       "animation_length": 0.65,
-      "loop": true,
+      "loop": false,
       "bones": {
         "torso": {
           "rotation": {
