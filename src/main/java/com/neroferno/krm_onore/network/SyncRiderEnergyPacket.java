@@ -4,7 +4,6 @@ import com.neroferno.krm_onore.KRMRevoMod;
 import com.neroferno.krm_onore.attachment.ModAttachments;
 import com.neroferno.krm_onore.attachment.RiderEnergyData;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -33,10 +32,9 @@ public record SyncRiderEnergyPacket(int entityId, float energy, float maxEnergy)
 
     public static void handle(SyncRiderEnergyPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.level == null) return;
+            if (context.player() == null || context.player().level() == null) return;
 
-            Entity entity = mc.level.getEntity(packet.entityId());
+            Entity entity = context.player().level().getEntity(packet.entityId());
             if (entity instanceof Player player) {
                 RiderEnergyData data = player.getData(ModAttachments.RIDER_ENERGY);
                 data.setMaxEnergy(packet.maxEnergy());

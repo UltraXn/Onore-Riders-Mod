@@ -2,7 +2,6 @@ package com.neroferno.krm_onore.network;
 
 import com.neroferno.krm_onore.KRMRevoMod;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -36,9 +35,8 @@ public record SyncVelocityPacket(double xd, double yd, double zd) implements Cus
      */
     public static void handle(SyncVelocityPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
-                mc.player.setDeltaMovement(packet.xd(), packet.yd(), packet.zd());
+            if (context.player() != null) {
+                context.player().setDeltaMovement(packet.xd(), packet.yd(), packet.zd());
             }
         });
     }
