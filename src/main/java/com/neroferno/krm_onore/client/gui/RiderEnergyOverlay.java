@@ -75,7 +75,7 @@ public class RiderEnergyOverlay {
         // 3. Render Energy Fill Bar
         int fillWidth = (int) (barWidth * ratio);
         if (fillWidth > 0) {
-            int form = player.getPersistentData().getInt("krm_revo:form");
+            int form = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getForm() : 1;
 
             int primaryColor;
             int shineColor;

@@ -19,6 +19,7 @@ import com.neroferno.krm_onore.network.SyncRiderStatePacket;
 import com.neroferno.krm_onore.network.PlayerAnimationPacket;
 import com.neroferno.krm_onore.attachment.ModAttachments;
 import com.neroferno.krm_onore.attachment.RiderEnergyData;
+import com.neroferno.krm_onore.attachment.RiderStateData;
 import com.neroferno.krm_onore.network.SyncRiderEnergyPacket;
 import net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -77,7 +78,7 @@ public class CombatEventHandler {
                 new SyncRiderEnergyPacket(attacker.getId(), attackerEnergy.getEnergy(), attackerEnergy.getMaxEnergy())
         );
 
-        int form = attacker.getPersistentData().getInt("krm_revo:form");
+        int form = attacker.hasData(ModAttachments.RIDER_STATE) ? attacker.getData(ModAttachments.RIDER_STATE).getForm() : 1;
         float damage = form == 1 ? 2.0f : 12.0f; // Growing = 2.0, other forms = 12.0
         event.setNewDamage(damage);
 
@@ -116,7 +117,7 @@ public class CombatEventHandler {
     @SubscribeEvent
     public static void onLivingFall(LivingFallEvent event) {
         if (event.getEntity() instanceof Player player) {
-            if (player.getPersistentData().getBoolean("RiderKickFallImmunity")) {
+            if (player.hasData(ModAttachments.RIDER_STATE) && player.getData(ModAttachments.RIDER_STATE).isRiderKickFallImmunity()) {
                 event.setDistance(0.0f);
                 event.setCanceled(true);
             }
@@ -128,43 +129,38 @@ public class CombatEventHandler {
         if (event.getEntity().level().isClientSide) return;
 
         Player player = event.getEntity();
-        if (player.getPersistentData().getBoolean(TransformationHelper.TAG_TRANSFORM_PENDING)) {
+        RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
+
+        if (stateData.isTransformPending()) {
             if (!player.isAlive() || !TransformationHelper.isBeltEquipped(player)) {
-                player.getPersistentData().putBoolean(TransformationHelper.TAG_TRANSFORM_PENDING, false);
-                player.getPersistentData().putInt(TransformationHelper.TAG_TRANSFORM_TICKS_REMAINING, 0);
+                stateData.setTransformPending(false);
+                stateData.setTransformTicksRemaining(0);
             } else {
-                int remaining = player.getPersistentData().getInt(
-                        TransformationHelper.TAG_TRANSFORM_TICKS_REMAINING
-                ) - 1;
-                player.getPersistentData().putInt(
-                        TransformationHelper.TAG_TRANSFORM_TICKS_REMAINING,
-                        Math.max(remaining, 0)
-                );
+                int remaining = stateData.getTransformTicksRemaining() - 1;
+                stateData.setTransformTicksRemaining(Math.max(remaining, 0));
                 if (remaining <= 0 && player instanceof ServerPlayer serverPlayer) {
-                    player.getPersistentData().putBoolean(TransformationHelper.TAG_TRANSFORM_PENDING, false);
+                    stateData.setTransformPending(false);
                     com.neroferno.krm_onore.network.ModNetwork.completeTransformation(serverPlayer);
                 }
             }
         }
 
-        updateGrowingFormArmor(player);
-        int state = player.getPersistentData().getInt("RiderKickState");
+        int state = stateData.getRiderKickState();
 
         if (state > 0) {
             if (!player.isAlive()) {
-                player.getPersistentData().putInt("RiderKickState", 0);
-                player.getPersistentData().putBoolean("RiderKickFallImmunity", false);
+                stateData.setRiderKickState(0);
+                stateData.setRiderKickFallImmunity(false);
                 syncRiderKickState(player, 0);
                 releaseTarget(player);
                 return;
             }
 
-            int ticks = player.getPersistentData().getInt("RiderKickTicks");
-            ticks++;
-            player.getPersistentData().putInt("RiderKickTicks", ticks);
+            int ticks = stateData.getRiderKickTicks() + 1;
+            stateData.setRiderKickTicks(ticks);
 
             // Continuously immobilize the target entity in place without lifting it
-            int targetId = player.getPersistentData().getInt("RiderKickTargetId");
+            int targetId = stateData.getRiderKickTargetId();
             if (targetId != 0) {
                 net.minecraft.world.entity.Entity targetEntity = player.level().getEntity(targetId);
                 if (targetEntity instanceof LivingEntity target && target.isAlive()) {
@@ -173,17 +169,19 @@ public class CombatEventHandler {
                     if (target instanceof net.minecraft.world.entity.Mob mob) {
                         mob.setNoAi(true);
                     }
-                    target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 40, 100, false, false));
+                    if (!target.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN)) {
+                        target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 40, 100, false, false));
+                    }
                 }
             }
 
             if (state == 1) { // Phase 1: High Leap & Apex Kick Pose
                 // Apex detection: peak of vertical leap (y velocity <= 0.08D) or ticks >= 14
-                int hoverTicks = player.getPersistentData().getInt("RiderKickHoverTicks");
+                int hoverTicks = stateData.getRiderKickHoverTicks();
 
                 if (hoverTicks > 0 || (ticks >= 3 && player.getDeltaMovement().y <= 0.08D) || ticks >= 16) {
                     hoverTicks++;
-                    player.getPersistentData().putInt("RiderKickHoverTicks", hoverTicks);
+                    stateData.setRiderKickHoverTicks(hoverTicks);
 
                     // Low gravity apex pause: gentle float at the apex
                     Vec3 currentVel = player.getDeltaMovement();
@@ -198,8 +196,8 @@ public class CombatEventHandler {
                                 net.minecraft.sounds.SoundEvents.FIRECHARGE_USE, net.minecraft.sounds.SoundSource.PLAYERS, 1.5f, 1.2f);
 
                         // Trigger the Rider Kick pose animation right at the apex
-                        if (!player.getPersistentData().getBoolean("RiderKickAnimPlayed")) {
-                            player.getPersistentData().putBoolean("RiderKickAnimPlayed", true);
+                        if (!stateData.isRiderKickAnimPlayed()) {
+                            stateData.setRiderKickAnimPlayed(true);
                             PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                                     new PlayerAnimationPacket(player.getId(), "rider_kick"));
                         }
@@ -208,19 +206,17 @@ public class CombatEventHandler {
                     // Hover lasts 3 ticks (sharp ~0.15s dynamic apex freeze frame)
                     if (hoverTicks >= 3) {
                         // Store Apex starting point
-                        player.getPersistentData().putDouble("RiderKickApexX", player.getX());
-                        player.getPersistentData().putDouble("RiderKickApexY", player.getY());
-                        player.getPersistentData().putDouble("RiderKickApexZ", player.getZ());
+                        stateData.setRiderKickApexPos(player.getX(), player.getY(), player.getZ());
 
                         // Transition to Phase 2 (Angled Dive Kick straight towards mob)
-                        player.getPersistentData().putInt("RiderKickState", 2);
-                        player.getPersistentData().putInt("RiderKickTicks", 0);
-                        player.getPersistentData().putInt("RiderKickHoverTicks", 0);
+                        stateData.setRiderKickState(2);
+                        stateData.setRiderKickTicks(0);
+                        stateData.setRiderKickHoverTicks(0);
                         syncRiderKickState(player, 2);
 
                         // Ensure animation is playing
-                        if (!player.getPersistentData().getBoolean("RiderKickAnimPlayed")) {
-                            player.getPersistentData().putBoolean("RiderKickAnimPlayed", true);
+                        if (!stateData.isRiderKickAnimPlayed()) {
+                            stateData.setRiderKickAnimPlayed(true);
                             PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                                     new PlayerAnimationPacket(player.getId(), "rider_kick"));
                         }
@@ -232,19 +228,19 @@ public class CombatEventHandler {
                 }
             } else if (state == 2) { // Phase 2: Direct Angled Dive Kick straight at Mob
                 // Ensure animation played
-                if (!player.getPersistentData().getBoolean("RiderKickAnimPlayed")) {
-                    player.getPersistentData().putBoolean("RiderKickAnimPlayed", true);
+                if (!stateData.isRiderKickAnimPlayed()) {
+                    stateData.setRiderKickAnimPlayed(true);
                     PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                             new PlayerAnimationPacket(player.getId(), "rider_kick"));
                 }
 
                 // Target position (updated from target if alive)
-                double tx = player.getPersistentData().getDouble("RiderKickTargetX");
-                double ty = player.getPersistentData().getDouble("RiderKickTargetY");
-                double tz = player.getPersistentData().getDouble("RiderKickTargetZ");
+                double tx = stateData.getRiderKickTargetX();
+                double ty = stateData.getRiderKickTargetY();
+                double tz = stateData.getRiderKickTargetZ();
                 double chestOffsetY = 0.8D;
 
-                targetId = player.getPersistentData().getInt("RiderKickTargetId");
+                targetId = stateData.getRiderKickTargetId();
                 LivingEntity targetEntityRef = null;
                 if (targetId != 0) {
                     net.minecraft.world.entity.Entity targetEntity = player.level().getEntity(targetId);
@@ -254,9 +250,7 @@ public class CombatEventHandler {
                         ty = target.getY(); // Actual ground position of target
                         tz = target.getZ();
                         chestOffsetY = target.getBbHeight() * 0.55D;
-                        player.getPersistentData().putDouble("RiderKickTargetX", tx);
-                        player.getPersistentData().putDouble("RiderKickTargetY", ty);
-                        player.getPersistentData().putDouble("RiderKickTargetZ", tz);
+                        stateData.setRiderKickTargetPos(tx, ty, tz);
                     }
                 }
 
@@ -296,8 +290,8 @@ public class CombatEventHandler {
 
                 if (closeToTarget || hitEntity || hitBlock || hitGround) {
                     // Transition to Phase 3: Hit-Stop & PAM! Explosion
-                    player.getPersistentData().putInt("RiderKickState", 3);
-                    player.getPersistentData().putInt("RiderKickTicks", 0);
+                    stateData.setRiderKickState(3);
+                    stateData.setRiderKickTicks(0);
                     player.setDeltaMovement(Vec3.ZERO);
                     player.hurtMarked = true;
                     PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncVelocityPacket(0, 0, 0));
@@ -314,9 +308,7 @@ public class CombatEventHandler {
                         impactPos = player.position();
                     }
 
-                    player.getPersistentData().putDouble("RiderKickImpactX", impactPos.x);
-                    player.getPersistentData().putDouble("RiderKickImpactY", impactPos.y);
-                    player.getPersistentData().putDouble("RiderKickImpactZ", impactPos.z);
+                    stateData.setRiderKickImpactPos(impactPos.x, impactPos.y, impactPos.z);
 
                     // Initial strike impact damage
                     if (targetEntityRef != null) {
@@ -338,15 +330,15 @@ public class CombatEventHandler {
                 }
 
                 if (ticks > 40) { // Safety timeout (2 seconds max dive)
-                    player.getPersistentData().putInt("RiderKickState", 0);
-                    player.getPersistentData().putBoolean("RiderKickFallImmunity", false);
+                    stateData.setRiderKickState(0);
+                    stateData.setRiderKickFallImmunity(false);
                     syncRiderKickState(player, 0);
                     releaseTarget(player);
                 }
             } else if (state == 3) { // Phase 3: Hit-Stop (4 ticks) & PAM! Finishing Explosion
-                double ix = player.getPersistentData().getDouble("RiderKickImpactX");
-                double iy = player.getPersistentData().getDouble("RiderKickImpactY");
-                double iz = player.getPersistentData().getDouble("RiderKickImpactZ");
+                double ix = stateData.getRiderKickImpactX();
+                double iy = stateData.getRiderKickImpactY();
+                double iz = stateData.getRiderKickImpactZ();
 
                 // Freeze in place during Hit-Stop (4 ticks)
                 player.teleportTo(ix, iy, iz);
@@ -382,10 +374,10 @@ public class CombatEventHandler {
                     player.level().playSound(null, ix, iy, iz, net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_THUNDER, net.minecraft.sounds.SoundSource.PLAYERS, 2.0f, 1.2f);
 
                     // Ability completed
-                    player.getPersistentData().putInt("RiderKickState", 0);
-                    player.getPersistentData().putInt("RiderKickHoverTicks", 0);
-                    player.getPersistentData().putBoolean("RiderKickFallImmunity", false);
-                    player.getPersistentData().putBoolean("RiderKickAnimPlayed", false);
+                    stateData.setRiderKickState(0);
+                    stateData.setRiderKickHoverTicks(0);
+                    stateData.setRiderKickFallImmunity(false);
+                    stateData.setRiderKickAnimPlayed(false);
                     player.resetFallDistance();
                     syncRiderKickState(player, 0);
                     releaseTarget(player);
@@ -403,8 +395,8 @@ public class CombatEventHandler {
         if (player.tickCount % 10 == 0) { // Sync twice a second
             boolean isTransformed = TransformationHelper.isTransformed(player);
             boolean hasBelt = TransformationHelper.isBeltEquipped(player);
-            int riderKickState = player.getPersistentData().getInt("RiderKickState");
-            int form = player.getPersistentData().getInt("krm_revo:form");
+            int riderKickState = stateData.getRiderKickState();
+            int form = stateData.getForm();
 
             PacketDistributor.sendToPlayersTrackingEntityAndSelf(
                     player,
@@ -427,7 +419,7 @@ public class CombatEventHandler {
                             true
                     );
                     boolean hasBelt = TransformationHelper.isBeltEquipped(player);
-                    int form = player.getPersistentData().getInt("krm_revo:form");
+                    int form = stateData.getForm();
 
                     PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                             new SyncRiderStatePacket(player.getId(), false, hasBelt, 0, form));
@@ -468,6 +460,7 @@ public class CombatEventHandler {
                 player,
                 new SyncRiderEnergyPacket(player.getId(), energy.getEnergy(), energy.getMaxEnergy())
         );
+        updateGrowingFormArmor(player);
     }
 
     @SubscribeEvent
@@ -480,15 +473,17 @@ public class CombatEventHandler {
                 player,
                 new SyncRiderEnergyPacket(player.getId(), energy.getEnergy(), energy.getMaxEnergy())
         );
+        updateGrowingFormArmor(player);
     }
 
-    private static void updateGrowingFormArmor(Player player) {
+    public static void updateGrowingFormArmor(Player player) {
         AttributeInstance armor = player.getAttribute(Attributes.ARMOR);
         if (armor == null) return;
 
         boolean shouldHaveBonus = TransformationHelper.isTransformed(player)
                 && TransformationHelper.isBeltEquipped(player)
-                && player.getPersistentData().getInt("krm_revo:form") == 1;
+                && player.hasData(ModAttachments.RIDER_STATE)
+                && player.getData(ModAttachments.RIDER_STATE).getForm() == 1;
         boolean hasBonus = armor.hasModifier(GROWING_FORM_ARMOR_ID);
 
         if (shouldHaveBonus && !hasBonus) {
@@ -503,7 +498,9 @@ public class CombatEventHandler {
     }
 
     public static void releaseTarget(Player player) {
-        int targetId = player.getPersistentData().getInt("RiderKickTargetId");
+        if (!player.hasData(ModAttachments.RIDER_STATE)) return;
+        RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
+        int targetId = stateData.getRiderKickTargetId();
         if (targetId != 0) {
             net.minecraft.world.entity.Entity targetEntity = player.level().getEntity(targetId);
             if (targetEntity instanceof LivingEntity target) {
@@ -512,20 +509,20 @@ public class CombatEventHandler {
                     mob.setNoAi(false);
                 }
             }
-            player.getPersistentData().putInt("RiderKickTargetId", 0);
-            player.getPersistentData().putInt("RiderKickHoverTicks", 0);
-            player.getPersistentData().putBoolean("RiderKickAnimPlayed", false);
+            stateData.setRiderKickTargetId(0);
+            stateData.setRiderKickHoverTicks(0);
+            stateData.setRiderKickAnimPlayed(false);
             PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                     new com.neroferno.krm_onore.network.SyncRiderKickTargetPacket(player.getId(), 0, 0, 0, 0));
         } else {
-            player.getPersistentData().putBoolean("RiderKickAnimPlayed", false);
+            stateData.setRiderKickAnimPlayed(false);
         }
     }
 
     private static void syncRiderKickState(Player player, int state) {
         boolean isTransformed = TransformationHelper.isTransformed(player);
         boolean hasBelt = TransformationHelper.isBeltEquipped(player);
-        int form = player.getPersistentData().getInt("krm_revo:form");
+        int form = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getForm() : 1;
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(
                 player,
                 new SyncRiderStatePacket(player.getId(), isTransformed, hasBelt, state, form)

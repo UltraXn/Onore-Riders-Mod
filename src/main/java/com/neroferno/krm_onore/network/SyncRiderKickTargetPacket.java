@@ -1,8 +1,9 @@
 package com.neroferno.krm_onore.network;
 
 import com.neroferno.krm_onore.KRMRevoMod;
+import com.neroferno.krm_onore.attachment.ModAttachments;
+import com.neroferno.krm_onore.attachment.RiderStateData;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -33,15 +34,13 @@ public record SyncRiderKickTargetPacket(int riderPlayerId, int targetEntityId, d
 
     public static void handle(SyncRiderKickTargetPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.level == null) return;
+            if (context.player() == null || context.player().level() == null) return;
 
-            Entity rider = mc.level.getEntity(packet.riderPlayerId());
+            Entity rider = context.player().level().getEntity(packet.riderPlayerId());
             if (rider instanceof Player player) {
-                player.getPersistentData().putInt("RiderKickTargetId", packet.targetEntityId());
-                player.getPersistentData().putDouble("RiderKickTargetX", packet.targetX());
-                player.getPersistentData().putDouble("RiderKickTargetY", packet.targetY());
-                player.getPersistentData().putDouble("RiderKickTargetZ", packet.targetZ());
+                RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
+                stateData.setRiderKickTargetId(packet.targetEntityId());
+                stateData.setRiderKickTargetPos(packet.targetX(), packet.targetY(), packet.targetZ());
             }
         });
     }

@@ -19,4 +19,8 @@ public class ModAttachments {
     // Rider Energy (Henshin Gauge)
     public static final Supplier<AttachmentType<RiderEnergyData>> RIDER_ENERGY = ATTACHMENT_TYPES.register("rider_energy",
             () -> AttachmentType.serializable(RiderEnergyData::new).copyOnDeath().build());
+
+    // Rider State (Transformation & Combat runtime state)
+    public static final Supplier<AttachmentType<RiderStateData>> RIDER_STATE = ATTACHMENT_TYPES.register("rider_state",
+            () -> AttachmentType.serializable(RiderStateData::new).copyOnDeath().build());
 }

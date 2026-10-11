@@ -17,6 +17,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
+import com.neroferno.krm_onore.attachment.ModAttachments;
 
 @SuppressWarnings("null")
 public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
@@ -113,8 +114,8 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         }
 
         // 4. Render Form Selection Buttons on the Top Bar
-        int currentForm = (this.minecraft != null && this.minecraft.player != null)
-                ? this.minecraft.player.getPersistentData().getInt("krm_revo:form") : 0;
+        int currentForm = (this.minecraft != null && this.minecraft.player != null && this.minecraft.player.hasData(ModAttachments.RIDER_STATE))
+                ? this.minecraft.player.getData(ModAttachments.RIDER_STATE).getForm() : 0;
 
         boolean isGrowingHovered = pMouseX >= x + 111 && pMouseX < x + 111 + 34 && pMouseY >= y + 3 && pMouseY < y + 3 + 13;
         boolean isMightyHovered = pMouseX >= x + 145 && pMouseX < x + 145 + 26 && pMouseY >= y + 3 && pMouseY < y + 3 + 14;
@@ -276,8 +277,8 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         }
         // Right-Top: Stats Panel
         else if (mouseX >= x + 269 && mouseX < x + 333 && mouseY >= y + 17 && mouseY < y + 100) {
-            int currentForm = (this.minecraft != null && this.minecraft.player != null)
-                    ? this.minecraft.player.getPersistentData().getInt("krm_revo:form") : 0;
+            int currentForm = (this.minecraft != null && this.minecraft.player != null && this.minecraft.player.hasData(ModAttachments.RIDER_STATE))
+                    ? this.minecraft.player.getData(ModAttachments.RIDER_STATE).getForm() : 0;
             java.util.List<Component> tooltip = java.util.List.of(
                     Component.literal("§6§lATRIBUTOS DE KUUGA"),
                     Component.literal("§c❤ Salud (HP): §f100 puntos vitales"),

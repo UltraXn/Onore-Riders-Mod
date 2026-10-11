@@ -61,7 +61,7 @@ public class BeltRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
             poseStack.pushPose();
             // Micro-inflation to prevent Z-fighting between base belt mesh and translucent core texture overlay
             poseStack.scale(1.0015F, 1.0015F, 1.0015F);
-            if (transformed && player.getPersistentData().getInt("krm_revo:form") == 1) {
+            if (transformed && player.hasData(ModAttachments.RIDER_STATE) && player.getData(ModAttachments.RIDER_STATE).getForm() == 1) {
                 float progress = getGrowingCoreTransitionProgress(player, partialTick);
                 if (progress < 1.0F) {
                     beltRenderer.renderWithTexture(player, beltStack, model, EquipmentSlot.LEGS, poseStack, buffer,
@@ -85,17 +85,18 @@ public class BeltRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
     }
 
     private static float getGrowingCoreTransitionProgress(AbstractClientPlayer player, float partialTick) {
-        if (!player.getPersistentData().getBoolean("krm_revo:has_transform_start_tick")) {
+        if (!player.hasData(ModAttachments.RIDER_STATE) || !player.getData(ModAttachments.RIDER_STATE).hasTransformStartTick()) {
             return 1.0F;
         }
-        long startTick = player.getPersistentData().getLong("krm_revo:transform_start_tick");
+        long startTick = player.getData(ModAttachments.RIDER_STATE).getTransformStartTick();
         return Math.min(1.0F, Math.max(0.0F, (player.tickCount + partialTick - startTick) / 12.0F));
     }
 
     private static ResourceLocation getCoreTextureForPlayer(AbstractClientPlayer player) {
         String coreTexture = "off";
         if (TransformationHelper.isTransformed(player)) {
-            coreTexture = switch (player.getPersistentData().getInt("krm_revo:form")) {
+            int form = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getForm() : 1;
+            coreTexture = switch (form) {
                 case 1 -> "growing";
                 case 2 -> "mighty";
                 case 3 -> "dragon";

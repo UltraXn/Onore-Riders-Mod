@@ -3,7 +3,6 @@ package com.neroferno.krm_onore.network;
 import com.neroferno.krm_onore.KRMRevoMod;
 import com.neroferno.krm_onore.attachment.ModAttachments;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -36,26 +35,26 @@ public record SyncRiderStatePacket(int entityId, boolean isTransformed, boolean 
 
     public static void handle(SyncRiderStatePacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.level == null) return;
+            if (context.player() == null || context.player().level() == null) return;
 
-            Entity entity = mc.level.getEntity(packet.entityId());
+            Entity entity = context.player().level().getEntity(packet.entityId());
             if (entity instanceof Player player) {
-                // Update persistent data for transformation
-                boolean wasTransformed = player.getPersistentData().getBoolean("krm_revo:transformed");
+                // Update RiderStateData attachment
+                com.neroferno.krm_onore.attachment.RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
+                boolean wasTransformed = stateData.isTransformed();
                 if (packet.isTransformed() && !wasTransformed) {
                     if (player.tickCount > 5) {
-                        player.getPersistentData().putLong("krm_revo:transform_start_tick", player.tickCount);
-                        player.getPersistentData().putBoolean("krm_revo:has_transform_start_tick", true);
+                        stateData.setTransformStartTick(player.tickCount);
+                        stateData.setHasTransformStartTick(true);
                     } else {
                         // Player was already transformed prior to joining the world; mark reveal completed
-                        player.getPersistentData().putLong("krm_revo:transform_start_tick", player.tickCount - 100);
-                        player.getPersistentData().putBoolean("krm_revo:has_transform_start_tick", true);
+                        stateData.setTransformStartTick(player.tickCount - 100);
+                        stateData.setHasTransformStartTick(true);
                     }
                 }
-                player.getPersistentData().putBoolean("krm_revo:transformed", packet.isTransformed());
-                player.getPersistentData().putInt("RiderKickState", packet.riderKickState());
-                player.getPersistentData().putInt("krm_revo:form", packet.form());
+                stateData.setTransformed(packet.isTransformed());
+                stateData.setRiderKickState(packet.riderKickState());
+                stateData.setForm(packet.form());
 
                 // Update specific Rider Inventory for belt
                 ItemStackHandler inv = player.getData(ModAttachments.RIDER_INVENTORY);

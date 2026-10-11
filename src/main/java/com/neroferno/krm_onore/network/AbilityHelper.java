@@ -1,6 +1,8 @@
 package com.neroferno.krm_onore.network;
 
 import com.neroferno.krm_onore.item.ModItems;
+import com.neroferno.krm_onore.attachment.ModAttachments;
+import com.neroferno.krm_onore.attachment.RiderStateData;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -48,7 +50,8 @@ public class AbilityHelper {
 
             // Check if player's custom cooldown is active
             long now = player.level().getGameTime();
-            long cooldownEnd = player.getPersistentData().getLong("RiderKickCooldownEnd");
+            RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
+            long cooldownEnd = stateData.getRiderKickCooldownEnd();
             if (now < cooldownEnd) {
                 long remainingTicks = cooldownEnd - now;
                 double remainingSeconds = (double) remainingTicks / 20.0D;
@@ -71,30 +74,29 @@ public class AbilityHelper {
             executeRiderKick(player);
             // Apply a 10-second (200 ticks) cooldown to the Belt item visually
             player.getCooldowns().addCooldown(ModItems.ARCLE_DRIVER.get(), 200);
-            player.getPersistentData().putLong("RiderKickCooldownEnd", now + 200);
+            stateData.setRiderKickCooldownEnd(now + 200);
         }
     }
 
     private static void executeRiderKick(ServerPlayer player) {
+        com.neroferno.krm_onore.attachment.RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
         // Check if already in the middle of a Rider Kick
-        if (player.getPersistentData().getInt("RiderKickState") > 0) {
+        if (stateData.getRiderKickState() > 0) {
             return;
         }
 
         // Initialize state machine
-        player.getPersistentData().putInt("RiderKickState", 1); // 1 = Leap Phase
-        player.getPersistentData().putInt("RiderKickTicks", 0);
-        player.getPersistentData().putInt("RiderKickHoverTicks", 0);
-        player.getPersistentData().putBoolean("RiderKickFallImmunity", true);
-        player.getPersistentData().putBoolean("RiderKickAnimPlayed", false);
+        stateData.setRiderKickState(1); // 1 = Leap Phase
+        stateData.setRiderKickTicks(0);
+        stateData.setRiderKickHoverTicks(0);
+        stateData.setRiderKickFallImmunity(true);
+        stateData.setRiderKickAnimPlayed(false);
 
         // Store start position
-        player.getPersistentData().putDouble("RiderKickStartX", player.getX());
-        player.getPersistentData().putDouble("RiderKickStartY", player.getY());
-        player.getPersistentData().putDouble("RiderKickStartZ", player.getZ());
+        stateData.setRiderKickStartPos(player.getX(), player.getY(), player.getZ());
 
         // 1. Play complete Rider Kick animation (ground crouch -> high leap -> apex dive -> landing)
-        player.getPersistentData().putBoolean("RiderKickAnimPlayed", true);
+        stateData.setRiderKickAnimPlayed(true);
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                 new PlayerAnimationPacket(player.getId(), "rider_kick"));
 
@@ -117,7 +119,7 @@ public class AbilityHelper {
         PacketDistributor.sendToPlayer(player, new SyncVelocityPacket(jumpVec.x, jumpVec.y, jumpVec.z));
 
         // Immediately sync Rider State to tracking clients so client-side particles start
-        int form = player.getPersistentData().getInt("krm_revo:form");
+        int form = stateData.getForm();
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                 new SyncRiderStatePacket(player.getId(), true, true, 1, form));
 
@@ -157,12 +159,11 @@ public class AbilityHelper {
 
     private static void findAndLockTarget(ServerPlayer player) {
         LivingEntity closestTarget = findTarget(player);
+        com.neroferno.krm_onore.attachment.RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
         if (closestTarget != null) {
-            player.getPersistentData().putInt("RiderKickTargetId", closestTarget.getId());
+            stateData.setRiderKickTargetId(closestTarget.getId());
             // Store stasis coordinates to absolutely prevent any client/server desync drift or gravity falling
-            player.getPersistentData().putDouble("RiderKickTargetX", closestTarget.getX());
-            player.getPersistentData().putDouble("RiderKickTargetY", closestTarget.getY());
-            player.getPersistentData().putDouble("RiderKickTargetZ", closestTarget.getZ());
+            stateData.setRiderKickTargetPos(closestTarget.getX(), closestTarget.getY(), closestTarget.getZ());
 
             // Freeze target's horizontal velocity immediately on the server while letting gravity keep it grounded
             closestTarget.setDeltaMovement(0, Math.min(0, closestTarget.getDeltaMovement().y), 0);
@@ -177,7 +178,7 @@ public class AbilityHelper {
             PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                     new SyncRiderKickTargetPacket(player.getId(), closestTarget.getId(), closestTarget.getX(), closestTarget.getY(), closestTarget.getZ()));
         } else {
-            player.getPersistentData().putInt("RiderKickTargetId", 0);
+            stateData.setRiderKickTargetId(0);
             PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                     new SyncRiderKickTargetPacket(player.getId(), 0, 0, 0, 0));
         }

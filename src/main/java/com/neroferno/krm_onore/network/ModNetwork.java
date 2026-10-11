@@ -115,7 +115,7 @@ public class ModNetwork {
             // Check if the belt is equipped via our custom system
             if (TransformationHelper.isBeltEquipped(player)) {
                 if (!TransformationHelper.isTransformed(player)
-                        && player.getPersistentData().getBoolean(TransformationHelper.TAG_TRANSFORM_PENDING)) {
+                        && player.getData(com.neroferno.krm_onore.attachment.ModAttachments.RIDER_STATE).isTransformPending()) {
                     return;
                 }
 
@@ -151,11 +151,10 @@ public class ModNetwork {
                     TransformationHelper.toggleTransformation(player);
                     syncTransformationState(player, false);
                 } else {
-                    player.getPersistentData().putBoolean(TransformationHelper.TAG_TRANSFORM_PENDING, true);
-                    player.getPersistentData().putInt(
-                            TransformationHelper.TAG_TRANSFORM_TICKS_REMAINING,
-                            TransformationHelper.TRANSFORM_ANIMATION_TICKS
-                    );
+                    com.neroferno.krm_onore.attachment.RiderStateData stateData =
+                            player.getData(com.neroferno.krm_onore.attachment.ModAttachments.RIDER_STATE);
+                    stateData.setTransformPending(true);
+                    stateData.setTransformTicksRemaining(TransformationHelper.TRANSFORM_ANIMATION_TICKS);
 
                     // Keep the suit hidden until the full player animation has finished.
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
@@ -182,13 +181,17 @@ public class ModNetwork {
     private static void syncTransformationState(ServerPlayer player, boolean transforming) {
         boolean isTransformed = TransformationHelper.isTransformed(player);
         boolean hasBelt = TransformationHelper.isBeltEquipped(player);
-        int riderKickState = player.getPersistentData().getInt("RiderKickState");
-        int form = player.getPersistentData().getInt("krm_revo:form");
+        com.neroferno.krm_onore.attachment.RiderStateData stateData =
+                player.getData(com.neroferno.krm_onore.attachment.ModAttachments.RIDER_STATE);
+        int riderKickState = stateData.getRiderKickState();
+        int form = stateData.getForm();
 
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                 new SyncRiderStatePacket(player.getId(), isTransformed, hasBelt, riderKickState, form));
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                 new TransformVFXPacket(player.getX(), player.getY(), player.getZ(), transforming));
+
+        com.neroferno.krm_onore.event.CombatEventHandler.updateGrowingFormArmor(player);
     }
 
     /**
@@ -248,6 +251,8 @@ public class ModNetwork {
                     
                     // Close the current screen (container)
                     player.closeContainer();
+
+                    com.neroferno.krm_onore.event.CombatEventHandler.updateGrowingFormArmor(player);
                 }
             }
         });
@@ -263,15 +268,19 @@ public class ModNetwork {
             if (!player.isAlive()) return;
 
             // Save the selected form ID
-            player.getPersistentData().putInt("krm_revo:form", packet.formId());
+            com.neroferno.krm_onore.attachment.RiderStateData stateData =
+                    player.getData(com.neroferno.krm_onore.attachment.ModAttachments.RIDER_STATE);
+            stateData.setForm(packet.formId());
 
             // Sync the updated state to tracking clients and self
             boolean isTransformed = TransformationHelper.isTransformed(player);
             boolean hasBelt = TransformationHelper.isBeltEquipped(player);
-            int riderKickState = player.getPersistentData().getInt("RiderKickState");
+            int riderKickState = stateData.getRiderKickState();
 
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                     new SyncRiderStatePacket(player.getId(), isTransformed, hasBelt, riderKickState, packet.formId()));
+
+            com.neroferno.krm_onore.event.CombatEventHandler.updateGrowingFormArmor(player);
         });
     }
 }

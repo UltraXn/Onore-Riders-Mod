@@ -17,10 +17,6 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 @SuppressWarnings("null")
 public class TransformationHelper {
 
-    private static final String TAG_TRANSFORMED  = "krm_revo:transformed";
-    private static final String TAG_LAST_TRANSFORM_TIME = "krm_revo:last_transform_time";
-    public static final String TAG_TRANSFORM_PENDING = "krm_revo:transform_pending";
-    public static final String TAG_TRANSFORM_TICKS_REMAINING = "krm_revo:transform_ticks_remaining";
     public static final int TRANSFORM_ANIMATION_TICKS = 90;
 
     public static String getActiveRiderId(Player player) {
@@ -34,21 +30,23 @@ public class TransformationHelper {
      * Returns true if the player is currently transformed.
      */
     public static boolean isTransformed(Player player) {
-        return player.getPersistentData().getBoolean(TAG_TRANSFORMED);
+        return player.hasData(ModAttachments.RIDER_STATE) && player.getData(ModAttachments.RIDER_STATE).isTransformed();
     }
 
     /**
      * Retrieves the game time (ticks) when the player last transformed/detransformed.
      */
     public static long getLastTransformTime(Player player) {
-        return player.getPersistentData().getLong(TAG_LAST_TRANSFORM_TIME);
+        return player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getLastTransformTime() : 0L;
     }
 
     /**
      * Sets the game time (ticks) of the player's last transformation action.
      */
     public static void setLastTransformTime(Player player, long time) {
-        player.getPersistentData().putLong(TAG_LAST_TRANSFORM_TIME, time);
+        if (player.hasData(ModAttachments.RIDER_STATE)) {
+            player.getData(ModAttachments.RIDER_STATE).setLastTransformTime(time);
+        }
     }
 
     /**
@@ -81,7 +79,10 @@ public class TransformationHelper {
      * Directly sets the transformation state.
      */
     public static void setTransformed(Player player, boolean transformed) {
-        player.getPersistentData().putBoolean(TAG_TRANSFORMED, transformed);
+        if (player.hasData(ModAttachments.RIDER_STATE)) {
+            player.getData(ModAttachments.RIDER_STATE).setTransformed(transformed);
+        }
+        com.neroferno.krm_onore.event.CombatEventHandler.updateGrowingFormArmor(player);
     }
 
     /**

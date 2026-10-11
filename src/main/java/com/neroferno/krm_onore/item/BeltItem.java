@@ -63,6 +63,7 @@ public class BeltItem extends Item implements GeoItem {
         if (riderInv.getStackInSlot(0).isEmpty()) {
             riderInv.setStackInSlot(0, beltStack.copy());
             player.setItemInHand(hand, ItemStack.EMPTY);
+            com.neroferno.krm_onore.event.CombatEventHandler.updateGrowingFormArmor(player);
             return InteractionResultHolder.consume(ItemStack.EMPTY);
         } else {
             if (player instanceof ServerPlayer sp) {

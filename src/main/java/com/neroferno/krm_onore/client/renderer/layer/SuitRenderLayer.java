@@ -6,6 +6,8 @@ import com.neroferno.krm_onore.client.renderer.SuitVisualRenderer;
 import com.neroferno.krm_onore.item.ModItems;
 import com.neroferno.krm_onore.item.SuitVisualItem;
 import com.neroferno.krm_onore.network.TransformationHelper;
+import com.neroferno.krm_onore.attachment.ModAttachments;
+import com.neroferno.krm_onore.attachment.RiderStateData;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -40,13 +42,14 @@ public class SuitRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
         parentModel.setAllVisible(true);
         this.renderer.prepForRender(player, dummySuitStack, EquipmentSlot.CHEST, parentModel);
         
-        int form = player.getPersistentData().getInt("krm_revo:form");
+        int form = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getForm() : 1;
         if (form == 1) {
-            long transformStartTick = player.getPersistentData().getLong("krm_revo:transform_start_tick");
-            if (!player.getPersistentData().getBoolean("krm_revo:has_transform_start_tick")) {
+            RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
+            long transformStartTick = stateData.getTransformStartTick();
+            if (!stateData.hasTransformStartTick()) {
                 transformStartTick = player.tickCount;
-                player.getPersistentData().putLong("krm_revo:transform_start_tick", transformStartTick);
-                player.getPersistentData().putBoolean("krm_revo:has_transform_start_tick", true);
+                stateData.setTransformStartTick(transformStartTick);
+                stateData.setHasTransformStartTick(true);
             }
             float elapsedTicks = (float) (player.tickCount + partialTick - transformStartTick);
             if (elapsedTicks < 12.0F) {

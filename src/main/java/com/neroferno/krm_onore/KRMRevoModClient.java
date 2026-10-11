@@ -20,6 +20,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import com.neroferno.krm_onore.client.renderer.layer.SuitRenderLayer;
 import com.neroferno.krm_onore.client.renderer.layer.BeltRenderLayer;
+import com.neroferno.krm_onore.attachment.ModAttachments;
+import com.neroferno.krm_onore.attachment.RiderStateData;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.model.PlayerModel;
@@ -165,14 +167,20 @@ class KRMRevoGameClientEvents {
         parentModel.setupAnim(player, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
         if (arm == HumanoidArm.RIGHT) {
             parentModel.rightArm.xRot = 0.0F;
+            parentModel.rightArm.xScale = 1.0F;
+            parentModel.rightArm.yScale = 1.0F;
+            parentModel.rightArm.zScale = 1.0F;
         } else {
             parentModel.leftArm.xRot = 0.0F;
+            parentModel.leftArm.xScale = 1.0F;
+            parentModel.leftArm.yScale = 1.0F;
+            parentModel.leftArm.zScale = 1.0F;
         }
 
         firstPersonSuitRenderer.setFirstPersonArm(arm);
         firstPersonSuitRenderer.prepForRender(player, firstPersonDummySuit, EquipmentSlot.CHEST, parentModel);
 
-        int form = player.getPersistentData().getInt("krm_revo:form");
+        int form = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getForm() : 1;
         ResourceLocation textureRes = form == 1 
             ? ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/growing_suit.png") 
             : ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/kuuga_suit.png");
@@ -193,7 +201,7 @@ class KRMRevoGameClientEvents {
     @SubscribeEvent
     public static void onMovementInput(MovementInputUpdateEvent event) {
         Player player = event.getEntity();
-        if (player.getPersistentData().getInt("RiderKickState") > 0) {
+        if (player.hasData(ModAttachments.RIDER_STATE) && player.getData(ModAttachments.RIDER_STATE).getRiderKickState() > 0) {
             Input input = event.getInput();
             if (input != null) {
                 input.left = false;
@@ -214,14 +222,15 @@ class KRMRevoGameClientEvents {
         boolean isClient = player.level().isClientSide();
 
         if (isClient) {
+            RiderStateData riderState = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE) : null;
             // Client-side visual tick for all players
-            int riderKickState = player.getPersistentData().getInt("RiderKickState");
+            int riderKickState = riderState != null ? riderState.getRiderKickState() : 0;
             if (riderKickState > 0) {
                 spawnRiderKickParticles(player, riderKickState);
             }
 
             // Client-side target immobilization to prevent client prediction drift
-            int targetId = player.getPersistentData().getInt("RiderKickTargetId");
+            int targetId = riderState != null ? riderState.getRiderKickTargetId() : 0;
             if (targetId != 0) {
                 net.minecraft.world.entity.Entity targetEntity = player.level().getEntity(targetId);
                 if (targetEntity instanceof net.minecraft.world.entity.LivingEntity target && target.isAlive()) {
@@ -230,25 +239,27 @@ class KRMRevoGameClientEvents {
                     if (target instanceof net.minecraft.world.entity.Mob mob) {
                         mob.setNoAi(true);
                     }
-                    target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 40, 100, false, false));
+                    if (!target.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN)) {
+                        target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 40, 100, false, false));
+                    }
                 }
             }
             
             // Only process key clicks and local movement simulation for the local player
             Minecraft mc = Minecraft.getInstance();
             LocalPlayer localPlayer = mc.player;
-            if (localPlayer != null && player == localPlayer) {
+            if (localPlayer != null && player == localPlayer && riderState != null) {
                 // Client-side movement replication for local player to prevent rubberbanding/desync
-                int prevKickState = player.getPersistentData().getInt("PrevRiderKickState");
-                int clientTicks = player.getPersistentData().getInt("ClientRiderKickTicks");
+                int prevKickState = riderState.getPrevRiderKickState();
+                int clientTicks = riderState.getClientRiderKickTicks();
                 
                 if (riderKickState != prevKickState) {
                     clientTicks = 0;
-                    player.getPersistentData().putInt("PrevRiderKickState", riderKickState);
+                    riderState.setPrevRiderKickState(riderKickState);
                 } else if (riderKickState > 0) {
                     clientTicks++;
                 }
-                player.getPersistentData().putInt("ClientRiderKickTicks", clientTicks);
+                riderState.setClientRiderKickTicks(clientTicks);
 
                 if (riderKickState > 0) {
                     if (localPlayer.input != null) {
@@ -270,9 +281,9 @@ class KRMRevoGameClientEvents {
                     }
                 } else if (riderKickState == 2) { // Phase 2: Curved Bézier Dive Kick
                     // Smooth cinematic camera target-lock towards target's torso
-                    double tx = player.getPersistentData().getDouble("RiderKickTargetX");
-                    double ty = player.getPersistentData().getDouble("RiderKickTargetY");
-                    double tz = player.getPersistentData().getDouble("RiderKickTargetZ");
+                    double tx = riderState.getRiderKickTargetX();
+                    double ty = riderState.getRiderKickTargetY();
+                    double tz = riderState.getRiderKickTargetZ();
                     if (tx != 0 || ty != 0 || tz != 0) {
                         double dx = tx - localPlayer.getX();
                         double dy = (ty + 0.9D) - localPlayer.getEyeY(); // Aim at enemy torso/chest

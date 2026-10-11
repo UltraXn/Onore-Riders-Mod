@@ -3,8 +3,8 @@ package com.neroferno.krm_onore.client.renderer;
 import com.neroferno.krm_onore.item.SuitVisualItem;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
+import com.neroferno.krm_onore.attachment.ModAttachments;
 import software.bernie.geckolib.animation.AnimationState;
-import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
 
@@ -25,10 +25,8 @@ public class SuitVisualRenderer extends GeoArmorRenderer<SuitVisualItem> {
     }
 
     public void clearGrowingRevealProgress() {
-        if (this.growingRevealProgress != null) {
-            this.growingRevealProgress = null;
-            resetAllBoneScales();
-        }
+        this.growingRevealProgress = null;
+        resetAllBoneScales();
     }
 
     public void resetAllBoneScales() {
@@ -44,15 +42,11 @@ public class SuitVisualRenderer extends GeoArmorRenderer<SuitVisualItem> {
     }
 
     private static void resetBone(GeoModel<SuitVisualItem> model, String boneName) {
-        model.getBone(boneName).ifPresent(bone -> {
-            bone.setHidden(false);
-            bone.updateScale(1.0F, 1.0F, 1.0F);
-        });
+        model.getBone(boneName).ifPresent(bone -> bone.updateScale(1.0F, 1.0F, 1.0F));
     }
 
     private void applyGrowingReveal(GeoModel<SuitVisualItem> model) {
         if (this.isFirstPerson) {
-            clearGrowingRevealProgress();
             return;
         }
         if (this.growingRevealProgress == null) return;
@@ -91,7 +85,6 @@ public class SuitVisualRenderer extends GeoArmorRenderer<SuitVisualItem> {
     public void setFirstPersonArm(net.minecraft.world.entity.HumanoidArm arm) {
         this.isFirstPerson = true;
         this.firstPersonArm = arm;
-        clearGrowingRevealProgress();
     }
 
     public void clearFirstPerson() {
@@ -101,22 +94,48 @@ public class SuitVisualRenderer extends GeoArmorRenderer<SuitVisualItem> {
 
     @Override
     protected void applyBoneVisibilityBySlot(net.minecraft.world.entity.EquipmentSlot currentSlot) {
+        GeoModel<SuitVisualItem> model = this.getGeoModel();
         if (this.isFirstPerson) {
             this.setAllVisible(false);
-            if (this.firstPersonArm == net.minecraft.world.entity.HumanoidArm.RIGHT) {
-                if (this.rightArm != null) {
-                    this.rightArm.setHidden(false);
-                    this.rightArm.updateScale(1.0F, 1.0F, 1.0F);
-                }
-            } else {
-                if (this.leftArm != null) {
-                    this.leftArm.setHidden(false);
-                    this.leftArm.updateScale(1.0F, 1.0F, 1.0F);
+            if (model != null) {
+                hideBone(model, "armorHead");
+                hideBone(model, "armorBody");
+                hideBone(model, "armorLeftLeg");
+                hideBone(model, "armorRightLeg");
+                if (this.firstPersonArm == net.minecraft.world.entity.HumanoidArm.RIGHT) {
+                    hideBone(model, "armorLeftArm");
+                    showArmBone(model, "armorRightArm");
+                } else {
+                    hideBone(model, "armorRightArm");
+                    showArmBone(model, "armorLeftArm");
                 }
             }
         } else {
             this.setAllVisible(true);
+            if (model != null) {
+                showBone(model, "armorHead");
+                showBone(model, "armorBody");
+                showBone(model, "armorLeftLeg");
+                showBone(model, "armorRightLeg");
+                showBone(model, "armorLeftArm");
+                showBone(model, "armorRightArm");
+            }
         }
+    }
+
+    private static void hideBone(GeoModel<SuitVisualItem> model, String boneName) {
+        model.getBone(boneName).ifPresent(bone -> bone.setHidden(true));
+    }
+
+    private static void showBone(GeoModel<SuitVisualItem> model, String boneName) {
+        model.getBone(boneName).ifPresent(bone -> bone.setHidden(false));
+    }
+
+    private static void showArmBone(GeoModel<SuitVisualItem> model, String boneName) {
+        model.getBone(boneName).ifPresent(bone -> {
+            bone.setHidden(false);
+            bone.updateScale(1.0F, 1.0F, 1.0F);
+        });
     }
 
     private static class SuitModel extends GeoModel<SuitVisualItem> {
@@ -131,7 +150,7 @@ public class SuitVisualRenderer extends GeoArmorRenderer<SuitVisualItem> {
             if (this.renderer != null) {
                 net.minecraft.world.entity.Entity entity = this.renderer.getCurrentEntity();
                 if (entity instanceof Player player) {
-                    int form = player.getPersistentData().getInt("krm_revo:form");
+                    int form = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getForm() : 1;
                     if (form == 1) {
                         return ResourceLocation.fromNamespaceAndPath("krm_revo", "geo/armor/growing_suit.geo.json");
                     }
@@ -145,7 +164,7 @@ public class SuitVisualRenderer extends GeoArmorRenderer<SuitVisualItem> {
             if (this.renderer != null) {
                 net.minecraft.world.entity.Entity entity = this.renderer.getCurrentEntity();
                 if (entity instanceof Player player) {
-                    int form = player.getPersistentData().getInt("krm_revo:form");
+                    int form = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getForm() : 1;
                     if (form == 1) {
                         return ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/growing_suit.png");
                     }
