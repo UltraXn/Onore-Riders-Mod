@@ -217,7 +217,7 @@ spotless {
     }
     format 'json', {
         target 'src/main/resources/**/*.json'
-        simple().indentWithSpaces(2)
+        indentWithSpaces(2)
         trimTrailingWhitespace()
         endWithNewline()
     }
