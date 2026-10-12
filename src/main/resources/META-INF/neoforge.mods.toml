@@ -39,10 +39,10 @@ displayName="${mod_name}" #mandatory
 #logoFile="krm_revo.png" #optional
 
 # A text field displayed in the mod UI
-#credits="" #optional
+credits="Toei Company Ltd., Shotaro Ishinomori, Kagerou_draw (Brian Sedano)"
 
 # The authors of the mod, displayed in the mod UI (optional)
-#authors=""
+authors="UltraXn, Kagerou_draw"
 
 # The description text for the mod (multi line!) (#mandatory)
 description='''

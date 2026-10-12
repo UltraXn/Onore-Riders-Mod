@@ -98,7 +98,7 @@ cd Onore-Riders-Mod
 
 ## 🤝 Créditos y Agradecimientos
 
-- **Desarrollado por**: [UltraXn](https://github.com/UltraXn) & Colaboradores.
+- **Desarrollado por**: [UltraXn](https://github.com/UltraXn) & [Kagerou_draw](https://github.com/briansedano08-creator) (Brian Sedano).
 - **Inspiración**: Franquicia *Kamen Rider* (Toei Company Ltd. & Shotaro Ishinomori).
 - **Herramientas de Modelado**: [Blockbench](https://www.blockbench.net/).
 - **Agradecimientos especiales**: A la comunidad tokusatsu y a todos los que apoyan el proyecto en GitHub y Discord.
