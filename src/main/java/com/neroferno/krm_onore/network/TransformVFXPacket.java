@@ -55,4 +55,3 @@ public record TransformVFXPacket(double posX, double posY, double posZ,
         });
     }
 }
-

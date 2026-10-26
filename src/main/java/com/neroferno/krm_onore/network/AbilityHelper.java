@@ -31,7 +31,7 @@ public class AbilityHelper {
 
         if ("rider_kick".equals(abilityId)) {
             // Check Rider Energy cost (30.0f)
-            com.neroferno.krm_onore.attachment.RiderEnergyData energyData = 
+            com.neroferno.krm_onore.attachment.RiderEnergyData energyData =
                     player.getData(com.neroferno.krm_onore.attachment.ModAttachments.RIDER_ENERGY);
             if (energyData.getEnergy() < 30.0f) {
                 MutableComponent msg = Component.translatable("chat.krm_revo.not_enough_energy");
@@ -55,11 +55,11 @@ public class AbilityHelper {
             if (now < cooldownEnd) {
                 long remainingTicks = cooldownEnd - now;
                 double remainingSeconds = (double) remainingTicks / 20.0D;
-                
+
                 MutableComponent msg = Component.translatable(
                         "chat.krm_revo.cooldown_actionbar", String.format("%.1f", remainingSeconds));
                 msg.withStyle(ChatFormatting.RED, ChatFormatting.BOLD);
-                
+
                 player.displayClientMessage(msg, true);
                 return;
             }

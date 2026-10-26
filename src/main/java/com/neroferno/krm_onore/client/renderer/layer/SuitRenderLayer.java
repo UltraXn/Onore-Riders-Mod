@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
 
 @SuppressWarnings({"null", "removal"})
 public class SuitRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
-    
+
     private final SuitVisualRenderer renderer;
     private ItemStack dummySuitStack;
 
@@ -40,7 +40,7 @@ public class SuitRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
         PlayerModel<AbstractClientPlayer> parentModel = this.getParentModel();
         parentModel.setAllVisible(true);
         this.renderer.prepForRender(player, dummySuitStack, EquipmentSlot.CHEST, parentModel);
-        
+
         int form = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getForm() : 1;
         if (SuitVisualRenderer.usesRevealAnimation(form)) {
             float elapsedTicks = SuitVisualRenderer.getGrowingRevealElapsedTicks(player, partialTick);
@@ -56,12 +56,12 @@ public class SuitRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
             parentModel.setAllVisible(false);
         }
 
-        ResourceLocation textureRes = form == 1 
-            ? ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/growing_suit.png") 
+        ResourceLocation textureRes = form == 1
+            ? ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/growing_suit.png")
             : ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/kuuga_suit.png");
 
-        RenderType renderType = this.renderer.getRenderType((SuitVisualItem) dummySuitStack.getItem(), 
-                                                            textureRes, 
+        RenderType renderType = this.renderer.getRenderType((SuitVisualItem) dummySuitStack.getItem(),
+                                                            textureRes,
                                                             bufferSource, partialTick);
 
         VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType);

@@ -24,7 +24,7 @@ public class FlyingSparkParticle extends TextureSheetParticle {
         this.gravity = 0.8F;
         this.speedUpWhenYMotionIsBlocked = true;
         this.hasPhysics = true;
-        
+
         this.xd = (xSpeed / 2) + (Math.random() * 3.0 - 1.5) * 0.05 * (this.random.nextFloat() > 0.95 ? 2 : 1);
         this.yd = (ySpeed / 2) + (Math.random() * 3.0 - 1.5) * 0.05 * (this.random.nextFloat() > 0.95 ? 2 : 1);
         this.zd = (zSpeed / 2) + (Math.random() * 3.0 - 1.5) * 0.05 * (this.random.nextFloat() > 0.95 ? 2 : 1);
@@ -37,7 +37,7 @@ public class FlyingSparkParticle extends TextureSheetParticle {
 
         this.sprites = spriteSet;
         this.setSpriteFromAge(this.sprites);
-        
+
         this.prevPrevX = this.xo;
         this.prevPrevY = this.yo;
         this.prevPrevZ = this.zo;
@@ -48,7 +48,7 @@ public class FlyingSparkParticle extends TextureSheetParticle {
         this.prevPrevX = this.xo;
         this.prevPrevY = this.yo;
         this.prevPrevZ = this.zo;
-        
+
         super.tick();
 
         if (this.age < 0 || this.removed) {
@@ -64,7 +64,7 @@ public class FlyingSparkParticle extends TextureSheetParticle {
             (this.random.nextFloat() < 0.01f && (Math.abs(this.xd) + Math.abs(this.yd) + Math.abs(this.zd)) > 0.001))) {
             this.level.addParticle(ModParticles.SPARK_FLASH.get(), this.prevPrevX, this.prevPrevY, this.prevPrevZ, 0, 0, 0);
         }
-        
+
         // Simple bounce simulation
         if (this.onGround) {
             this.xd *= 0.7;

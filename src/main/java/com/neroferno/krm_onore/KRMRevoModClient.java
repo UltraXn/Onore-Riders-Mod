@@ -243,12 +243,12 @@ class KRMRevoGameClientEvents {
         firstPersonSuitRenderer.prepForRender(player, firstPersonDummySuit, EquipmentSlot.CHEST, parentModel);
 
         int form = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getForm() : 1;
-        ResourceLocation textureRes = form == 1 
-            ? ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/growing_suit.png") 
+        ResourceLocation textureRes = form == 1
+            ? ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/growing_suit.png")
             : ResourceLocation.fromNamespaceAndPath("krm_revo", "textures/armor/kuuga_suit.png");
 
-        RenderType renderType = firstPersonSuitRenderer.getRenderType((SuitVisualItem) firstPersonDummySuit.getItem(), 
-                                                                     textureRes, 
+        RenderType renderType = firstPersonSuitRenderer.getRenderType((SuitVisualItem) firstPersonDummySuit.getItem(),
+                                                                     textureRes,
                                                                      bufferSource, 0.0F);
         VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType);
         if (FP_ARM_FLAT_LIGHT) {
@@ -373,7 +373,7 @@ class KRMRevoGameClientEvents {
                     }
                 }
             }
-            
+
             // Only process key clicks and local movement simulation for the local player
             Minecraft mc = Minecraft.getInstance();
             LocalPlayer localPlayer = mc.player;
@@ -381,7 +381,7 @@ class KRMRevoGameClientEvents {
                 // Client-side movement replication for local player to prevent rubberbanding/desync
                 int prevKickState = riderState.getPrevRiderKickState();
                 int clientTicks = riderState.getClientRiderKickTicks();
-                
+
                 if (riderKickState != prevKickState) {
                     clientTicks = 0;
                     riderState.setPrevRiderKickState(riderKickState);
@@ -452,9 +452,9 @@ class KRMRevoGameClientEvents {
     private static void spawnRiderKickParticles(Player player, int state) {
         net.minecraft.client.particle.ParticleEngine engine = Minecraft.getInstance().particleEngine;
         if (engine == null) return;
-        
+
         java.util.concurrent.ThreadLocalRandom rand = java.util.concurrent.ThreadLocalRandom.current();
-        
+
         if (state == 1) { // Leap / Apex Hover Phase
             // Swirling sparks concentrating around the player's body and right leg
             for (int i = 0; i < 3; i++) {
@@ -463,7 +463,7 @@ class KRMRevoGameClientEvents {
                 double px = player.getX() + Math.cos(angle) * radius;
                 double py = player.getY() + rand.nextDouble() * player.getBbHeight();
                 double pz = player.getZ() + Math.sin(angle) * radius;
-                
+
                 // Slow rising sparks
                 engine.createParticle(ModParticles.LINEAR_SPARK.get(), px, py, pz, 0, 0.15D, 0);
                 if (rand.nextBoolean()) {
@@ -474,23 +474,23 @@ class KRMRevoGameClientEvents {
             // Dense fiery trail and custom sparks flowing behind the player's kicking foot
             Vec3 footPos = player.position().add(0, 0.15D, 0);
             Vec3 vel = player.getDeltaMovement();
-            
+
             for (int i = 0; i < 6; i++) {
                 double rx = (rand.nextDouble() - 0.5D) * 0.4D;
                 double ry = (rand.nextDouble() - 0.5D) * 0.2D;
                 double rz = (rand.nextDouble() - 0.5D) * 0.4D;
-                
+
                 // Fiery combustion trailing backwards along the velocity vector
-                engine.createParticle(ParticleTypes.FLAME, footPos.x + rx, footPos.y + ry, footPos.z + rz, 
+                engine.createParticle(ParticleTypes.FLAME, footPos.x + rx, footPos.y + ry, footPos.z + rz,
                         -vel.x * 0.18D, -vel.y * 0.18D, -vel.z * 0.18D);
-                
+
                 // Linear sparks shooting backwards with slight dispersion
                 engine.createParticle(ModParticles.LINEAR_SPARK.get(), footPos.x + rx, footPos.y + ry, footPos.z + rz,
                         -vel.x * 0.35D + (rand.nextDouble() - 0.5D) * 0.15D,
                         -vel.y * 0.35D + (rand.nextDouble() - 0.5D) * 0.15D,
                         -vel.z * 0.35D + (rand.nextDouble() - 0.5D) * 0.15D);
             }
-            
+
             // Spark flashes bursting occasionally along the trajectory
             if (rand.nextFloat() < 0.25F) {
                 engine.createParticle(ModParticles.SPARK_FLASH.get(), footPos.x, footPos.y, footPos.z, 0, 0, 0);
@@ -519,7 +519,7 @@ class KRMRevoGameClientEvents {
                 double angle = rand.nextDouble() * Math.PI * 2;
                 double px = pos.x + Math.cos(angle) * radius;
                 double pz = pos.z + Math.sin(angle) * radius;
-                
+
                 engine.createParticle(ParticleTypes.FLAME, px, pos.y + 0.1D, pz, 0, 0.02D, 0);
             }
         }

@@ -44,7 +44,7 @@ public class AnimationHandler {
         // Find the animation in the registry
         ResourceLocation animLoc = ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, animName);
         IPlayable playable = PlayerAnimationRegistry.getAnimation(animLoc);
-        
+
         if (playable == null) {
             // Fallback for animations named using Bedrock standard "animation.mod_id.anim_name"
             animLoc = ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "animation." + KRMRevoMod.MODID + "." + animName);
