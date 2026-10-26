@@ -7,7 +7,6 @@ import com.neroferno.krm_onore.item.ModItems;
 import com.neroferno.krm_onore.item.SuitVisualItem;
 import com.neroferno.krm_onore.network.TransformationHelper;
 import com.neroferno.krm_onore.attachment.ModAttachments;
-import com.neroferno.krm_onore.attachment.RiderStateData;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -43,36 +42,11 @@ public class SuitRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
         this.renderer.prepForRender(player, dummySuitStack, EquipmentSlot.CHEST, parentModel);
         
         int form = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getForm() : 1;
-        if (form == 1) {
-            RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
-            long transformStartTick = stateData.getTransformStartTick();
-            if (!stateData.hasTransformStartTick()) {
-                transformStartTick = player.tickCount;
-                stateData.setTransformStartTick(transformStartTick);
-                stateData.setHasTransformStartTick(true);
-            }
-            float elapsedTicks = (float) (player.tickCount + partialTick - transformStartTick);
-            if (elapsedTicks < 12.0F) {
+        if (SuitVisualRenderer.usesRevealAnimation(form)) {
+            float elapsedTicks = SuitVisualRenderer.getGrowingRevealElapsedTicks(player, partialTick);
+            if (elapsedTicks < SuitVisualRenderer.GROWING_REVEAL_TOTAL_TICKS) {
                 this.renderer.setGrowingRevealProgress(elapsedTicks);
-                // Keep the limbs visible until each armor bone has scaled into place to prevent flickering gaps
                 parentModel.setAllVisible(true);
-                if (elapsedTicks >= 0.0F) parentModel.body.visible = false;
-                if (elapsedTicks >= 3.0F) {
-                    parentModel.leftArm.visible = false;
-                    parentModel.rightArm.visible = false;
-                    parentModel.leftSleeve.visible = false;
-                    parentModel.rightSleeve.visible = false;
-                }
-                if (elapsedTicks >= 6.0F) {
-                    parentModel.leftLeg.visible = false;
-                    parentModel.rightLeg.visible = false;
-                    parentModel.leftPants.visible = false;
-                    parentModel.rightPants.visible = false;
-                }
-                if (elapsedTicks >= 9.0F) {
-                    parentModel.head.visible = false;
-                    parentModel.hat.visible = false;
-                }
             } else {
                 this.renderer.clearGrowingRevealProgress();
                 parentModel.setAllVisible(false);

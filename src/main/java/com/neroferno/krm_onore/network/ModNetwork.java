@@ -153,12 +153,17 @@ public class ModNetwork {
                 } else {
                     com.neroferno.krm_onore.attachment.RiderStateData stateData =
                             player.getData(com.neroferno.krm_onore.attachment.ModAttachments.RIDER_STATE);
+                    boolean movingOrSprinting = packet.moving() || player.isSprinting();
+                    int transformTicks = movingOrSprinting
+                            ? TransformationHelper.TRANSFORM_ANIMATION_FAST_TICKS
+                            : TransformationHelper.TRANSFORM_ANIMATION_TICKS;
                     stateData.setTransformPending(true);
-                    stateData.setTransformTicksRemaining(TransformationHelper.TRANSFORM_ANIMATION_TICKS);
+                    stateData.setTransformTicksRemaining(transformTicks);
 
-                    // Keep the suit hidden until the full player animation has finished.
+                    // Start the transformation animation before the suit reveal begins.
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
-                            new PlayerAnimationPacket(player.getId(), "kuuga_transform"));
+                            new PlayerAnimationPacket(player.getId(),
+                                    movingOrSprinting ? "kuuga_transform_fast" : "kuuga_transform"));
                 }
             } else {
                 player.displayClientMessage(

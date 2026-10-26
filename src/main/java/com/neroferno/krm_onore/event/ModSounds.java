@@ -19,6 +19,10 @@ public class ModSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> TRANSFORM =
             registerSoundEvent("transform");
 
+    /** Tema del henshin del Arcle Driver, sincronizado con kuuga_transform (arranca en 0.5 s). */
+    public static final DeferredHolder<SoundEvent, SoundEvent> KUUGA_TRANSFORM =
+            registerSoundEvent("kuuga_transform");
+
     private static DeferredHolder<SoundEvent, SoundEvent> registerSoundEvent(String name) {
         return SOUND_EVENTS.register(name, () -> SoundEvent.createVariableRangeEvent(
                 ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, name)));

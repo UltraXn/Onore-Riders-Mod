@@ -141,6 +141,63 @@ public class KRMRevoModClient {
 class KRMRevoGameClientEvents {
     private static SuitVisualRenderer firstPersonSuitRenderer;
     private static ItemStack firstPersonDummySuit;
+    // DEBUG temporal de la mano en primera persona (quitar cuando se resuelva)
+    private static final boolean FP_ARM_DEBUG = false;
+    private static long fpArmLastLogTick = -100;
+    // Tick de kuuga_transform en el que arranca el sonido (0.5 s * 20). Igual que CORE_FADE_START_TICKS.
+    private static final int TRANSFORM_SOUND_TICK = TransformationHelper.TRANSFORM_SOUND_START_TICKS;
+    // Si es true, el brazo de primera persona ignora el sombreado direccional (se ve el color real del PNG).
+    // Ponlo en false para volver al sombreado vanilla.
+    private static final boolean FP_ARM_FLAT_LIGHT = true;
+
+    /**
+     * Envuelve un VertexConsumer y sustituye todas las normales por (0, 1, 0). El shader de entidades calcula
+     * la luz difusa con esa normal, así que todas las caras reciben el brillo máximo. La luz del mundo
+     * (lightmap / packedLight) no se toca.
+     */
+    private static final class FlatLitVertexConsumer implements VertexConsumer {
+        private final VertexConsumer delegate;
+
+        FlatLitVertexConsumer(VertexConsumer delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public VertexConsumer addVertex(float x, float y, float z) {
+            delegate.addVertex(x, y, z);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setColor(int red, int green, int blue, int alpha) {
+            delegate.setColor(red, green, blue, alpha);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv(float u, float v) {
+            delegate.setUv(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv1(int u, int v) {
+            delegate.setUv1(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv2(int u, int v) {
+            delegate.setUv2(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setNormal(float x, float y, float z) {
+            delegate.setNormal(0.0F, 1.0F, 0.0F);
+            return this;
+        }
+    }
 
     @SubscribeEvent
     public static void onRenderArm(RenderArmEvent event) {
@@ -164,6 +221,10 @@ class KRMRevoGameClientEvents {
         parentModel.attackTime = 0.0F;
         parentModel.crouching = false;
         parentModel.swimAmount = 0.0F;
+        // AgeableListModel.young vale true por defecto y solo se corrige cuando el renderer dibuja a ese
+        // jugador en tercera persona. Si entras al mundo en primera persona, GeckoLib ve young=true y
+        // aplica la escala de bebé (x0.5) al brazo.
+        parentModel.young = false;
         parentModel.setupAnim(player, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
         if (arm == HumanoidArm.RIGHT) {
             parentModel.rightArm.xRot = 0.0F;
@@ -178,6 +239,7 @@ class KRMRevoGameClientEvents {
         }
 
         firstPersonSuitRenderer.setFirstPersonArm(arm);
+        firstPersonSuitRenderer.setFirstPersonFlatLight(FP_ARM_FLAT_LIGHT);
         firstPersonSuitRenderer.prepForRender(player, firstPersonDummySuit, EquipmentSlot.CHEST, parentModel);
 
         int form = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getForm() : 1;
@@ -189,9 +251,48 @@ class KRMRevoGameClientEvents {
                                                                      textureRes, 
                                                                      bufferSource, 0.0F);
         VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType);
+        if (FP_ARM_FLAT_LIGHT) {
+            // Las caras que miran "de espaldas" a las luces direccionales de Minecraft se multiplican por ~0.4,
+            // y un PNG blanco (p. ej. la placa del puño) se ve gris oscuro. Aquí se fuerza una normal hacia
+            // arriba para que el brazo de primera persona se dibuje con el color real de la textura.
+            vertexConsumer = new FlatLitVertexConsumer(vertexConsumer);
+        }
 
         poseStack.pushPose();
         firstPersonSuitRenderer.renderToBuffer(poseStack, vertexConsumer, packedLight, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+
+        if (FP_ARM_DEBUG && player.tickCount - fpArmLastLogTick >= 20) {
+            fpArmLastLogTick = player.tickCount;
+            try {
+                net.minecraft.client.model.geom.ModelPart part = arm == HumanoidArm.RIGHT ? parentModel.rightArm : parentModel.leftArm;
+                org.joml.Vector3f ps = new org.joml.Vector3f();
+                poseStack.last().pose().getScale(ps);
+                var st = player.getData(ModAttachments.RIDER_STATE);
+                StringBuilder sb = new StringBuilder("[FPArm] tick=").append(player.tickCount)
+                        .append(" arm=").append(arm)
+                        .append(" poseScale=").append(ps)
+                        .append(" part pos=(").append(part.x).append(',').append(part.y).append(',').append(part.z).append(')')
+                        .append(" rot=(").append(part.xRot).append(',').append(part.yRot).append(',').append(part.zRot).append(')')
+                        .append(" scale=(").append(part.xScale).append(',').append(part.yScale).append(',').append(part.zScale).append(')')
+                        .append(" | form=").append(st.getForm())
+                        .append(" hasAnimStart=").append(st.hasTransformAnimationStartTick())
+                        .append(" hasStart=").append(st.hasTransformStartTick())
+                        .append(" start=").append(st.getTransformStartTick())
+                        .append(" reveal=").append(SuitVisualRenderer.getGrowingRevealElapsedTicks(player, 0.0F))
+                        .append(" young=").append(parentModel.young);
+                var geo = firstPersonSuitRenderer.getGeoModel();
+                for (String n : new String[]{"steve", "RightArm", "LeftArm", "Body", "armorRightArm", "armorLeftArm"}) {
+                    geo.getBone(n).ifPresent(b -> sb.append(" | ").append(n)
+                            .append(" scale=(").append(b.getScaleX()).append(',').append(b.getScaleY()).append(',').append(b.getScaleZ()).append(')')
+                            .append(" pos=(").append(b.getPosX()).append(',').append(b.getPosY()).append(',').append(b.getPosZ()).append(')')
+                            .append(" rot=(").append(b.getRotX()).append(',').append(b.getRotY()).append(',').append(b.getRotZ()).append(')')
+                            .append(" hidden=").append(b.isHidden()));
+                }
+                KRMRevoMod.LOGGER.info(sb.toString());
+            } catch (Throwable t) {
+                KRMRevoMod.LOGGER.warn("[FPArm] debug failed", t);
+            }
+        }
         poseStack.popPose();
 
         firstPersonSuitRenderer.clearFirstPerson();
@@ -201,7 +302,18 @@ class KRMRevoGameClientEvents {
     @SubscribeEvent
     public static void onMovementInput(MovementInputUpdateEvent event) {
         Player player = event.getEntity();
-        if (player.hasData(ModAttachments.RIDER_STATE) && player.getData(ModAttachments.RIDER_STATE).getRiderKickState() > 0) {
+        RiderStateData riderState = player.hasData(ModAttachments.RIDER_STATE)
+                ? player.getData(ModAttachments.RIDER_STATE)
+                : null;
+        boolean transforming = riderState != null
+                && riderState.hasTransformAnimationStartTick()
+                && player.tickCount - riderState.getTransformAnimationStartTick() >= 0
+                && player.tickCount - riderState.getTransformAnimationStartTick()
+                        <= riderState.getTransformAnimationTicks() + (int) SuitVisualRenderer.GROWING_REVEAL_TOTAL_TICKS;
+
+        boolean lockForTransformation = transforming
+                && riderState.getTransformAnimationTicks() != TransformationHelper.TRANSFORM_ANIMATION_FAST_TICKS;
+        if (lockForTransformation || (riderState != null && riderState.getRiderKickState() > 0)) {
             Input input = event.getInput();
             if (input != null) {
                 input.left = false;
@@ -223,6 +335,23 @@ class KRMRevoGameClientEvents {
 
         if (isClient) {
             RiderStateData riderState = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE) : null;
+            // Sonido del henshin: arranca en 0.5 s de kuuga_transform (no en kuuga_transform_fast).
+            if (riderState != null
+                    && riderState.hasTransformAnimationStartTick()
+                    && !riderState.isTransformSoundPlayed()
+                    && riderState.getTransformAnimationTicks() != TransformationHelper.TRANSFORM_ANIMATION_FAST_TICKS) {
+                long soundElapsed = player.tickCount - riderState.getTransformAnimationStartTick();
+                if (soundElapsed >= TRANSFORM_SOUND_TICK) {
+                    riderState.setTransformSoundPlayed(true);
+                    // Si llegamos muy tarde (p. ej. al cargar el chunk) no lo reproducimos a medias.
+                    if (soundElapsed <= TRANSFORM_SOUND_TICK + 5) {
+                        player.level().playLocalSound(player.getX(), player.getY(), player.getZ(),
+                                com.neroferno.krm_onore.event.ModSounds.KUUGA_TRANSFORM.get(),
+                                net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F, false);
+                    }
+                }
+            }
+
             // Client-side visual tick for all players
             int riderKickState = riderState != null ? riderState.getRiderKickState() : 0;
             if (riderKickState > 0) {
@@ -300,7 +429,10 @@ class KRMRevoGameClientEvents {
                 }
 
                 if (ModKeybindings.TRANSFORM_KEY.consumeClick()) {
-                    PacketDistributor.sendToServer(new TransformPacket());
+                    Input input = localPlayer.input;
+                    boolean moving = localPlayer.isSprinting()
+                            || (input != null && (input.up || input.down || input.left || input.right));
+                    PacketDistributor.sendToServer(new TransformPacket(moving));
                 }
 
                 if (ModKeybindings.ABILITY_KEY.consumeClick()) {
@@ -396,7 +528,7 @@ class KRMRevoGameClientEvents {
     @SubscribeEvent
     public static void onRenderPlayerPre(RenderPlayerEvent.Pre event) {
         AbstractClientPlayer player = (AbstractClientPlayer) event.getEntity();
-        if (TransformationHelper.isTransformed(player)) {
+        if (SuitVisualRenderer.shouldHideVanillaBody(player, event.getPartialTick())) {
             PlayerModel<AbstractClientPlayer> model = event.getRenderer().getModel();
             model.setAllVisible(false);
         }
@@ -408,4 +540,3 @@ class KRMRevoGameClientEvents {
         model.setAllVisible(true);
     }
 }
-

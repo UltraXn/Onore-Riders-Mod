@@ -43,13 +43,36 @@ public record SyncRiderStatePacket(int entityId, boolean isTransformed, boolean 
                 com.neroferno.krm_onore.attachment.RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
                 boolean wasTransformed = stateData.isTransformed();
                 if (packet.isTransformed() && !wasTransformed) {
-                    if (player.tickCount > 5) {
+                    if (stateData.hasTransformAnimationStartTick()) {
+                        stateData.setTransformStartTick(
+                                stateData.getTransformAnimationStartTick()
+                                        + stateData.getTransformAnimationTicks());
+                        stateData.setHasTransformStartTick(true);
+                    } else if (stateData.hasReceivedInitialSync()) {
+                        // Se transformó en vivo sin animación (p. ej. comando): reproducir el reveal.
                         stateData.setTransformStartTick(player.tickCount);
                         stateData.setHasTransformStartTick(true);
                     } else {
-                        // Player was already transformed prior to joining the world; mark reveal completed
+                        // Primer paquete de este jugador y ya llega transformado: estaba transformado antes de
+                        // entrar al mundo. Antes se usaba "tickCount > 5", pero el primer sync llega ~10 ticks
+                        // después de entrar, así que el reveal del traje se reproducía en cada login.
                         stateData.setTransformStartTick(player.tickCount - 100);
                         stateData.setHasTransformStartTick(true);
+                    }
+                }
+                stateData.setReceivedInitialSync(true);
+                if (!packet.isTransformed()) {
+                    // El servidor reenvía el estado cada 10 ticks (CombatEventHandler) con isTransformed=false
+                    // mientras la animación aún corre. Si borramos el start tick aquí, el fade del core pierde
+                    // su reloj y cae al respaldo (12 ticks) justo cuando termina la animación.
+                    // Solo se borra al destransformarse, al quitar el cinturón o si la animación ya expiró.
+                    boolean animationRunning = !wasTransformed
+                            && packet.hasBelt()
+                            && stateData.hasTransformAnimationStartTick()
+                            && player.tickCount - stateData.getTransformAnimationStartTick()
+                                    <= stateData.getTransformAnimationTicks() + 40;
+                    if (!animationRunning) {
+                        stateData.clearTransformAnimationStartTick();
                     }
                 }
                 stateData.setTransformed(packet.isTransformed());
