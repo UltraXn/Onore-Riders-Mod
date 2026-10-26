@@ -1,1 +1,4 @@
-{"format_version":"1.8.0","animations":{"animation.driver_belt.idle":{"loop":true}}}
+{
+  "format_version": "1.8.0",
+  "animations": {}
+}

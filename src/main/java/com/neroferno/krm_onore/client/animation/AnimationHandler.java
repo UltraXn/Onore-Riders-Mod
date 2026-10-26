@@ -1,6 +1,7 @@
 package com.neroferno.krm_onore.client.animation;
 
 import com.neroferno.krm_onore.KRMRevoMod;
+import com.neroferno.krm_onore.attachment.ModAttachments;
 import dev.kosmx.playerAnim.api.IPlayable;
 import dev.kosmx.playerAnim.api.layered.AnimationStack;
 import dev.kosmx.playerAnim.api.layered.IAnimation;
@@ -43,7 +44,7 @@ public class AnimationHandler {
         // Find the animation in the registry
         ResourceLocation animLoc = ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, animName);
         IPlayable playable = PlayerAnimationRegistry.getAnimation(animLoc);
-        
+
         if (playable == null) {
             // Fallback for animations named using Bedrock standard "animation.mod_id.anim_name"
             animLoc = ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "animation." + KRMRevoMod.MODID + "." + animName);
@@ -51,6 +52,13 @@ public class AnimationHandler {
         }
 
         if (playable != null) {
+            if (animName.equals("kuuga_transform") || animName.equals("kuuga_transform_fast")) {
+                var stateData = player.getData(ModAttachments.RIDER_STATE);
+                stateData.setTransformAnimationTicks(animName.equals("kuuga_transform_fast")
+                        ? com.neroferno.krm_onore.network.TransformationHelper.TRANSFORM_ANIMATION_FAST_TICKS
+                        : com.neroferno.krm_onore.network.TransformationHelper.TRANSFORM_ANIMATION_TICKS);
+                stateData.setTransformAnimationStartTick(player.tickCount);
+            }
             IAnimation animation = playable.playAnimation();
 
             ModifierLayer<IAnimation> layer = com.neroferno.krm_onore.KRMRevoModClient.getAnimationLayer(player);

@@ -25,12 +25,16 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
     // Textures provided in assets/gui
     private static final ResourceLocation TEXTURE_MARCO =
             ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/marco.png");
-    private static final ResourceLocation TEXTURE_PERSONAJE =
-            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/personaje_display.png");
     private static final ResourceLocation TEXTURE_SKILLS =
             ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/skills_display.png");
     private static final ResourceLocation TEXTURE_STATS =
             ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/stats_display.png");
+    private static final ResourceLocation GROWING_ICON =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/hud/growing_icon.png");
+    private static final ResourceLocation MIGHTY_ICON =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/hud/mighty_icon.png");
+    private static final ResourceLocation KUUGA_ICON =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/hud/kuuga_icon.png");
     private static final ResourceLocation TEXTURE_GROWING_IDLE =
             ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/growing_button_idle.png");
     private static final ResourceLocation TEXTURE_GROWING_HOVER =
@@ -43,8 +47,8 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
     public RiderScreen(RiderMenu pMenu, Inventory pPlayerInventory, Component pTitle) {
         super(pMenu, pPlayerInventory, pTitle);
         // Dimensions matching marco.png
-        this.imageWidth = 349;
-        this.imageHeight = 205;
+        this.imageWidth = 387;
+        this.imageHeight = 217;
     }
 
     @Override
@@ -75,13 +79,12 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         int x = (width - imageWidth) / 2;
         int y = (height - imageHeight) / 2;
 
+        // Draw the opaque frame first so its panels remain behind the interactive GUI content.
+        RenderSystem.enableBlend();
+        guiGraphics.blit(TEXTURE_MARCO, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
+        RenderSystem.disableBlend();
+
         // 1. Render Backgrounds inside each compartment
-
-        // Left-Top Panel (Character preview backdrop): x=15..79, y=16..115 (w=65, h=100)
-        guiGraphics.blit(TEXTURE_PERSONAJE, x + 15, y + 16, 0, 0, 65, 100, 73, 100);
-
-        // Left-Bottom Panel (Slots compartment): x=15..79, y=120..191 (w=65, h=72)
-        guiGraphics.fill(x + 15, y + 120, x + 79, y + 191, 0xFF242424);
 
         // Center Panel (Skill Tree backdrop): x=90..257, y=17..191 (w=168, h=175)
         guiGraphics.blit(TEXTURE_SKILLS, x + 90, y + 17, 0, 0, 168, 175, 175, 180);
@@ -92,25 +95,41 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         // Right-Bottom Panel (Action & Status area): x=269..333, y=105..191 (w=65, h=86)
         guiGraphics.fill(x + 269, y + 105, x + 333, y + 191, 0xFF242424);
 
-        // 2. Draw Slot Outlines in the bottom-left compartment (2x3 grid)
-        int[][] slots = { {22, 125}, {22, 145}, {22, 165}, {52, 125}, {52, 145}, {52, 165} };
-        for (int[] slot : slots) {
-            int sx = x + slot[0] - 1;
-            int sy = y + slot[1] - 1;
-            guiGraphics.fill(sx, sy, sx + 18, sy + 18, 0xFF4F4F4F);
-            guiGraphics.fill(sx + 1, sy + 1, sx + 17, sy + 17, 0xFF181818);
-        }
+        String riderTitle = "KAMEN RIDER KUUGA";
+        int iconWidth = 14;
+        int iconHeight = 13;
+        int iconGap = 2;
+        int maxTitleGroupWidth = 100;
+        int titleTextWidth = font.width(riderTitle);
+        int fittedTextWidth = Math.min(titleTextWidth, maxTitleGroupWidth - iconWidth - iconGap);
+        int titleGroupWidth = iconWidth + iconGap + fittedTextWidth;
+        int titleGroupX = x + 54 - titleGroupWidth / 2;
+        guiGraphics.blit(KUUGA_ICON, titleGroupX + 1, y + 5, iconWidth, iconHeight, 0, 0, 34, 32, 34, 32);
 
-        // Slot icons/subtitles for clarity
-        guiGraphics.drawCenteredString(font, "§8CASCO", x + 30, y + 116, 0x888888);
-        guiGraphics.drawCenteredString(font, "§8BRAZOS", x + 30, y + 184, 0x888888);
-        guiGraphics.drawCenteredString(font, "§8DRIVER", x + 61, y + 184, 0x888888);
+        float titleScale = (float) fittedTextWidth / titleTextWidth;
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(titleGroupX + iconWidth + iconGap, y + 11, 0);
+        guiGraphics.pose().scale(titleScale, titleScale, 1.0F);
+        guiGraphics.drawString(font, riderTitle, 0, 0, 0xFFE6E7F0, false);
+        guiGraphics.pose().popPose();
 
         // 3. Render 3D Player Avatar Preview in the top-left compartment
         if (this.minecraft != null && this.minecraft.player != null) {
             InventoryScreen.renderEntityInInventoryFollowsMouse(
-                    guiGraphics, x + 18, y + 18, x + 76, y + 112, 38, 0.0f, pMouseX, pMouseY, this.minecraft.player
+                    guiGraphics, x + 18, y + 18, x + 76, y + 162, 54, 0.0f, pMouseX, pMouseY, this.minecraft.player
             );
+        }
+
+        // Show the active Rider form in the frame's lower-left inset; keep it empty when civil.
+        if (this.minecraft != null && this.minecraft.player != null
+                && TransformationHelper.isTransformed(this.minecraft.player)) {
+            int form = this.minecraft.player.hasData(ModAttachments.RIDER_STATE)
+                    ? this.minecraft.player.getData(ModAttachments.RIDER_STATE).getForm()
+                    : 0;
+            if (form == 1 || form == 2) {
+                ResourceLocation formIcon = form == 1 ? GROWING_ICON : MIGHTY_ICON;
+                guiGraphics.blit(formIcon, x + 1, y + 145, 0, 0, 34, 32, 34, 32);
+            }
         }
 
         // 4. Render Form Selection Buttons on the Top Bar
@@ -121,7 +140,7 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         boolean isMightyHovered = pMouseX >= x + 145 && pMouseX < x + 145 + 26 && pMouseY >= y + 3 && pMouseY < y + 3 + 14;
 
         ResourceLocation growingTex = (isGrowingHovered || currentForm == 1) ? TEXTURE_GROWING_HOVER : TEXTURE_GROWING_IDLE;
-        ResourceLocation mightyTex = (isMightyHovered || currentForm == 0) ? TEXTURE_MIGHTY_HOVER : TEXTURE_MIGHTY_IDLE;
+        ResourceLocation mightyTex = (isMightyHovered || currentForm != 1) ? TEXTURE_MIGHTY_HOVER : TEXTURE_MIGHTY_IDLE;
 
         guiGraphics.blit(growingTex, x + 111, y + 3, 0, 0, 34, 13, 34, 13);
         guiGraphics.blit(mightyTex, x + 145, y + 3, 0, 0, 26, 14, 26, 14);
@@ -152,7 +171,7 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         renderSkillCard(guiGraphics, x + 97, y + 88, 154, 36,
                 "§c🥊 COMBATE FÍSICO §7[Desarmado]",
                 "§fCadena fluida de 5 golpes marciales",
-                currentForm == 1 ? "§7Daño: §f6.0 §7| Empuje medio" : "§7Daño: §c12.0 §7| Impacto ígneo");
+                currentForm == 1 ? "§7Daño: §f5.0 §7| Empuje medio" : "§7Daño: §c7.0 §7| Sin empuje extra");
 
         // Ability Card 3: Arcle Power
         renderSkillCard(guiGraphics, x + 97, y + 128, 154, 36,
@@ -168,9 +187,9 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         // 6. Render Right-Top Panel (Stats)
         guiGraphics.drawCenteredString(font, "§6§lSTATS", x + 301, y + 21, 0xFFFF55);
         guiGraphics.drawString(font, "§c❤ HP: §f100", x + 274, y + 36, 0xFFFFFF);
-        guiGraphics.drawString(font, currentForm == 1 ? "§e⚔ ATK: §f6" : "§e⚔ ATK: §f12", x + 274, y + 50, 0xFFFFFF);
-        guiGraphics.drawString(font, "§9🛡 DEF: §f15", x + 274, y + 64, 0xFFFFFF);
-        guiGraphics.drawString(font, "§a⚡ SPD: §f+20%", x + 274, y + 78, 0xFFFFFF);
+        guiGraphics.drawString(font, currentForm == 1 ? "§e⚔ ATK: §f5" : "§e⚔ ATK: §f7", x + 274, y + 50, 0xFFFFFF);
+        guiGraphics.drawString(font, currentForm == 1 ? "§9🛡 DEF: §f10" : "§9🛡 DEF: §f15", x + 274, y + 64, 0xFFFFFF);
+        guiGraphics.drawString(font, currentForm == 1 ? "§a⚡ SPD: §f+0%" : "§a⚡ SPD: §f+15%", x + 274, y + 78, 0xFFFFFF);
 
         // 7. Render Right-Bottom Panel (Status)
         guiGraphics.drawCenteredString(font, "§e§lESTADO", x + 301, y + 112, 0xFFFFAA);
@@ -184,10 +203,6 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
             guiGraphics.drawCenteredString(font, "§8Presiona [K]", x + 301, y + 139, 0x888888);
         }
 
-        // 8. FINALLY, Blit the metallic frame MARCO.PNG on top of all panels
-        RenderSystem.enableBlend();
-        guiGraphics.blit(TEXTURE_MARCO, x, y, 0, 0, 349, 205, 349, 205);
-        RenderSystem.disableBlend();
     }
 
     private void renderSkillCard(GuiGraphics g, int cx, int cy, int cw, int ch, String title, String desc, String footer) {
@@ -283,13 +298,16 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
                     Component.literal("§6§lATRIBUTOS DE KUUGA"),
                     Component.literal("§c❤ Salud (HP): §f100 puntos vitales"),
                     Component.literal(currentForm == 1
-                            ? "§e⚔ Ataque (ATK): §f6.0 §7(Desarmado Growing)"
-                            : "§e⚔ Ataque (ATK): §f12.0 §7(Fuego Elemental Mighty)"),
-                    Component.literal("§9🛡 Defensa (DEF): §f15 §7(Armadura Blindada)"),
-                    Component.literal("§a⚡ Velocidad (SPD): §f+20% §7(Agilidad Arcle)")
+                            ? "§e⚔ Ataque (ATK): §f5.0 §7(Desarmado Growing)"
+                            : "§e⚔ Ataque (ATK): §f7.0 §7(Desarmado Mighty)"),
+                    Component.literal(currentForm == 1
+                            ? "§9🛡 Defensa (DEF): §f10 §7(Armadura Blindada)"
+                            : "§9🛡 Defensa (DEF): §f15 §7(Armadura Blindada)"),
+                    Component.literal(currentForm == 1
+                            ? "§a⚡ Velocidad (SPD): §f+0% §7(Base)"
+                            : "§a⚡ Velocidad (SPD): §f+15% §7(Agilidad Arcle)")
             );
             guiGraphics.renderComponentTooltip(font, tooltip, mouseX, mouseY);
         }
     }
 }
-

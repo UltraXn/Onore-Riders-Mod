@@ -41,9 +41,9 @@ import java.util.List;
  * Handles KRM-modified combat behavior.
  *
  * While transformed and attacking with an EMPTY hand:
- *   - Growing Form deals 2.0 damage; other forms deal 12.0
- *   - Growing Form grants 15 armor points while active
- *   - Knockback is increased
+ *   - Growing Form: 5 damage, +10 armor, +1 toughness, extra knockback
+ *   - Mighty Form:  7 damage, +15 armor, +4 toughness, +15% movement speed, no fire / extra knockback
+ *   - Other forms:  12 damage, fire and extra knockback
  *
  *
  * Future phases will add:
@@ -53,9 +53,23 @@ import java.util.List;
 @EventBusSubscriber(modid = KRMRevoMod.MODID)
 public class CombatEventHandler {
 
-    private static final ResourceLocation GROWING_FORM_ARMOR_ID =
-            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "growing_form_armor");
-    private static final double GROWING_FORM_ARMOR_BONUS = 15.0D;
+    // Modificadores transitorios (no se guardan en disco) que dependen de la forma activa.
+    private static final ResourceLocation FORM_ARMOR_ID =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "form_armor");
+    private static final ResourceLocation FORM_TOUGHNESS_ID =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "form_toughness");
+    private static final ResourceLocation FORM_SPEED_ID =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "form_speed");
+    private static final double GROWING_ARMOR = 10.0D;
+    private static final double GROWING_TOUGHNESS = 1.0D;
+    private static final double MIGHTY_ARMOR = 15.0D;
+    private static final double MIGHTY_TOUGHNESS = 4.0D;
+    // +15% sobre la velocidad base (ADD_MULTIPLIED_BASE). Sube o baja este valor a gusto.
+    private static final double MIGHTY_SPEED_BONUS = 0.15D;
+    private static final ResourceLocation TRANSFORMED_ARMOR_SUPPRESSION_ID =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "transformed_armor_suppression");
+    private static final ResourceLocation TRANSFORMED_TOUGHNESS_SUPPRESSION_ID =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "transformed_toughness_suppression");
 
     @SubscribeEvent
     public static void onLivingDamage(LivingDamageEvent.Pre event) {
@@ -79,7 +93,7 @@ public class CombatEventHandler {
         );
 
         int form = attacker.hasData(ModAttachments.RIDER_STATE) ? attacker.getData(ModAttachments.RIDER_STATE).getForm() : 1;
-        float damage = form == 1 ? 2.0f : 12.0f; // Growing = 2.0, other forms = 12.0
+        float damage = form == 1 ? 5.0f : form == 2 ? 7.0f : 12.0f; // Growing = 5, Mighty = 7, others = 12
         event.setNewDamage(damage);
 
         LivingEntity victim = event.getEntity();
@@ -87,7 +101,11 @@ public class CombatEventHandler {
             Vec3 look = attacker.getLookAngle().normalize();
             victim.push(look.x * 0.25D, 0.05D, look.z * 0.25D);
             victim.hurtMarked = true;
-        } else { // Mighty Form (Rojo)
+        } else if (form == 2) { // Mighty Form (Rojo): sin fuego ni knockback extra
+            // Electric / impact sparks sound
+            attacker.level().playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                    net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_IMPACT, net.minecraft.sounds.SoundSource.PLAYERS, 0.8f, 1.8f);
+        } else { // Otras formas
             victim.setRemainingFireTicks(40); // Set on fire for 2 seconds
             Vec3 look = attacker.getLookAngle().normalize();
             victim.push(look.x * 0.6D, 0.1D, look.z * 0.6D);
@@ -129,6 +147,7 @@ public class CombatEventHandler {
         if (event.getEntity().level().isClientSide) return;
 
         Player player = event.getEntity();
+        updateGrowingFormArmor(player);
         RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
 
         if (stateData.isTransformPending()) {
@@ -476,25 +495,90 @@ public class CombatEventHandler {
         updateGrowingFormArmor(player);
     }
 
+    /**
+     * Aplica los bonos de la forma activa: armadura y dureza (Growing y Mighty) y velocidad (Mighty).
+     * Se mantiene el nombre original porque lo llaman TransformationHelper y otros handlers.
+     */
     public static void updateGrowingFormArmor(Player player) {
         AttributeInstance armor = player.getAttribute(Attributes.ARMOR);
-        if (armor == null) return;
+        AttributeInstance toughness = player.getAttribute(Attributes.ARMOR_TOUGHNESS);
+        if (armor == null || toughness == null || !player.hasData(ModAttachments.RIDER_STATE)) return;
+        RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
 
-        boolean shouldHaveBonus = TransformationHelper.isTransformed(player)
-                && TransformationHelper.isBeltEquipped(player)
-                && player.hasData(ModAttachments.RIDER_STATE)
-                && player.getData(ModAttachments.RIDER_STATE).getForm() == 1;
-        boolean hasBonus = armor.hasModifier(GROWING_FORM_ARMOR_ID);
+        boolean active = TransformationHelper.isTransformed(player) && TransformationHelper.isBeltEquipped(player);
+        int form = stateData.getForm();
+        double armorBonus = !active ? 0.0D : form == 1 ? GROWING_ARMOR : form == 2 ? MIGHTY_ARMOR : 0.0D;
+        double toughnessBonus = !active ? 0.0D : form == 1 ? GROWING_TOUGHNESS : form == 2 ? MIGHTY_TOUGHNESS : 0.0D;
+        double speedBonus = active && form == 2 ? MIGHTY_SPEED_BONUS : 0.0D;
 
-        if (shouldHaveBonus && !hasBonus) {
-            armor.addTransientModifier(new AttributeModifier(
-                    GROWING_FORM_ARMOR_ID,
-                    GROWING_FORM_ARMOR_BONUS,
+        setFormModifier(armor, FORM_ARMOR_ID, armorBonus, AttributeModifier.Operation.ADD_VALUE);
+        setFormModifier(toughness, FORM_TOUGHNESS_ID, toughnessBonus, AttributeModifier.Operation.ADD_VALUE);
+        AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speed != null) {
+            setFormModifier(speed, FORM_SPEED_ID, speedBonus, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+        }
+
+        boolean transformed = TransformationHelper.isTransformed(player);
+        double growingBonus = armorBonus;
+        double armorWithoutSuppression = armor.getValue() + stateData.getSuppressedArmor();
+        double armorToSuppress = transformed
+                ? Math.max(0.0D, armorWithoutSuppression - growingBonus)
+                : 0.0D;
+        updateArmorSuppression(
+                armor,
+                TRANSFORMED_ARMOR_SUPPRESSION_ID,
+                stateData.getSuppressedArmor(),
+                armorToSuppress,
+                stateData::setSuppressedArmor
+        );
+
+        double toughnessWithoutSuppression = toughness.getValue() + stateData.getSuppressedArmorToughness();
+        double growingToughnessBonus = toughnessBonus;
+        double toughnessToSuppress = transformed
+                ? Math.max(0.0D, toughnessWithoutSuppression - growingToughnessBonus)
+                : 0.0D;
+        updateArmorSuppression(
+                toughness,
+                TRANSFORMED_TOUGHNESS_SUPPRESSION_ID,
+                stateData.getSuppressedArmorToughness(),
+                toughnessToSuppress,
+                stateData::setSuppressedArmorToughness
+        );
+    }
+
+    /** Deja el modificador con exactamente {@code amount} (o lo quita si es 0), recreandolo si cambio la forma. */
+    private static void setFormModifier(AttributeInstance attribute, ResourceLocation id, double amount,
+                                        AttributeModifier.Operation operation) {
+        AttributeModifier existing = attribute.getModifier(id);
+        if (amount <= 0.0D) {
+            if (existing != null) attribute.removeModifier(id);
+            return;
+        }
+        if (existing != null) {
+            if (existing.amount() == amount && existing.operation() == operation) return;
+            attribute.removeModifier(id);
+        }
+        attribute.addTransientModifier(new AttributeModifier(id, amount, operation));
+    }
+
+    private static void updateArmorSuppression(
+            AttributeInstance attribute,
+            ResourceLocation modifierId,
+            double previousSuppression,
+            double suppression,
+            java.util.function.DoubleConsumer updateStoredSuppression
+    ) {
+        if (Math.abs(suppression - previousSuppression) < 0.001D) return;
+
+        attribute.removeModifier(modifierId);
+        if (suppression > 0.0D) {
+            attribute.addTransientModifier(new AttributeModifier(
+                    modifierId,
+                    -suppression,
                     AttributeModifier.Operation.ADD_VALUE
             ));
-        } else if (!shouldHaveBonus && hasBonus) {
-            armor.removeModifier(GROWING_FORM_ARMOR_ID);
         }
+        updateStoredSuppression.accept(suppression);
     }
 
     public static void releaseTarget(Player player) {

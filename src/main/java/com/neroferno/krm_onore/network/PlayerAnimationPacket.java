@@ -36,4 +36,3 @@ public record PlayerAnimationPacket(int playerId, String animationName) implemen
         });
     }
 }
-

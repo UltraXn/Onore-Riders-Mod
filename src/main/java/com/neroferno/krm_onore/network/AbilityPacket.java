@@ -25,4 +25,3 @@ public record AbilityPacket(String abilityId) implements CustomPacketPayload {
         return TYPE;
     }
 }
-

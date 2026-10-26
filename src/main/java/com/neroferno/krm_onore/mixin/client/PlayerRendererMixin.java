@@ -1,5 +1,7 @@
 package com.neroferno.krm_onore.mixin.client;
 
+import com.neroferno.krm_onore.attachment.ModAttachments;
+import com.neroferno.krm_onore.client.renderer.SuitVisualRenderer;
 import com.neroferno.krm_onore.network.TransformationHelper;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -14,6 +16,13 @@ public class PlayerRendererMixin {
     @Inject(method = "setModelProperties", at = @At("RETURN"))
     private void krm_revo$setModelProperties(AbstractClientPlayer player, CallbackInfo ci) {
         if (TransformationHelper.isTransformed(player)) {
+            var riderState = player.getData(ModAttachments.RIDER_STATE);
+            if (SuitVisualRenderer.usesRevealAnimation(riderState.getForm())
+                    && SuitVisualRenderer.getGrowingRevealElapsedTicks(player, 0.0F)
+                    < SuitVisualRenderer.GROWING_REVEAL_TOTAL_TICKS) {
+                return;
+            }
+
             PlayerRenderer renderer = (PlayerRenderer) (Object) this;
             PlayerModel<AbstractClientPlayer> model = renderer.getModel();
             model.setAllVisible(false);

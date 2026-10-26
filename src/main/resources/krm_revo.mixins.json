@@ -6,7 +6,8 @@
   "refmap": "krm_revo.refmap.json",
   "mixins": [
     "WeaponRegistryMixin",
-    "WeaponRegistryAccessor"
+    "WeaponRegistryAccessor",
+    "InventoryPickupMixin"
   ],
   "client": [
     "client.ClientWeaponRegistryMixin",

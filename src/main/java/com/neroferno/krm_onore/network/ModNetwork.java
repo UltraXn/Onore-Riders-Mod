@@ -122,10 +122,10 @@ public class ModNetwork {
                 // Enforce a 3-second (60 ticks) cooldown
                 long currentTime = player.level().getGameTime();
                 long lastTime = TransformationHelper.getLastTransformTime(player);
-                
+
                 if (currentTime - lastTime < 60) {
                     player.displayClientMessage(
-                        net.minecraft.network.chat.Component.translatable("krm_revo.transform.cooldown"), 
+                        net.minecraft.network.chat.Component.translatable("krm_revo.transform.cooldown"),
                         true
                     );
                     return; // Abort transformation
@@ -134,7 +134,7 @@ public class ModNetwork {
                 // If currently untransformed and trying to transform, check if energy > 0
                 boolean isTransformedBefore = TransformationHelper.isTransformed(player);
                 if (!isTransformedBefore) {
-                    com.neroferno.krm_onore.attachment.RiderEnergyData energyData = 
+                    com.neroferno.krm_onore.attachment.RiderEnergyData energyData =
                             player.getData(com.neroferno.krm_onore.attachment.ModAttachments.RIDER_ENERGY);
                     if (energyData.getEnergy() <= 0.0f) {
                         player.displayClientMessage(
@@ -145,7 +145,7 @@ public class ModNetwork {
                         return; // Abort transformation due to exhaustion
                     }
                 }
-                
+
                 if (TransformationHelper.isTransformed(player)) {
                     TransformationHelper.setLastTransformTime(player, currentTime);
                     TransformationHelper.toggleTransformation(player);
@@ -153,12 +153,17 @@ public class ModNetwork {
                 } else {
                     com.neroferno.krm_onore.attachment.RiderStateData stateData =
                             player.getData(com.neroferno.krm_onore.attachment.ModAttachments.RIDER_STATE);
+                    boolean movingOrSprinting = packet.moving() || player.isSprinting();
+                    int transformTicks = movingOrSprinting
+                            ? TransformationHelper.TRANSFORM_ANIMATION_FAST_TICKS
+                            : TransformationHelper.TRANSFORM_ANIMATION_TICKS;
                     stateData.setTransformPending(true);
-                    stateData.setTransformTicksRemaining(TransformationHelper.TRANSFORM_ANIMATION_TICKS);
+                    stateData.setTransformTicksRemaining(transformTicks);
 
-                    // Keep the suit hidden until the full player animation has finished.
+                    // Start the transformation animation before the suit reveal begins.
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
-                            new PlayerAnimationPacket(player.getId(), "kuuga_transform"));
+                            new PlayerAnimationPacket(player.getId(),
+                                    movingOrSprinting ? "kuuga_transform_fast" : "kuuga_transform"));
                 }
             } else {
                 player.displayClientMessage(
@@ -248,7 +253,7 @@ public class ModNetwork {
                     // Sync the new empty state to the client and all tracking players
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
                             new SyncRiderStatePacket(player.getId(), false, false, 0, 0));
-                    
+
                     // Close the current screen (container)
                     player.closeContainer();
 

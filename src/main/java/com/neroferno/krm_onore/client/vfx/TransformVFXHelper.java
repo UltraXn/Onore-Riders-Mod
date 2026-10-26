@@ -61,9 +61,9 @@ public class TransformVFXHelper {
             double vy = 0.2 + ThreadLocalRandom.current().nextDouble() * 0.2;
             double vz = Math.sin(angle) * 0.3;
 
-            // Firework jumping sparks 
+            // Firework jumping sparks
             engine.createParticle(ParticleTypes.FIREWORK, center.x, center.y, center.z, vx * 1.5, vy * 1.5, vz * 1.5);
-            
+
             // Linear flying sparks bursting outward
             engine.createParticle(ModParticles.LINEAR_SPARK.get(), center.x, center.y, center.z, vx * 2.5, vy * 1.8, vz * 2.5);
         }
@@ -89,7 +89,7 @@ public class TransformVFXHelper {
                     vy,
                     vz
             );
-            
+
             if (i % 2 == 0) {
                  engine.createParticle(
                     ParticleTypes.FIREWORK,
@@ -109,18 +109,18 @@ public class TransformVFXHelper {
 
         ParticleEngine engine = Minecraft.getInstance().particleEngine;
         int count = 15 + ThreadLocalRandom.current().nextInt(10); // More sparks to make it look forceful
-        
+
         Vec3 dir = direction.normalize();
 
         for (int i = 0; i < count; i++) {
             double offsetX = (ThreadLocalRandom.current().nextFloat() - 0.5f) * 0.4;
             double offsetY = (ThreadLocalRandom.current().nextFloat() - 0.5f) * 0.4;
             double offsetZ = (ThreadLocalRandom.current().nextFloat() - 0.5f) * 0.4;
-            
+
             double x = pos.x + offsetX;
             double y = pos.y + offsetY;
             double z = pos.z + offsetZ;
-            
+
             // Push mostly in the hit direction with some random spread
             double spread = 0.6;
             double vx = dir.x * 0.8 + (ThreadLocalRandom.current().nextFloat() - 0.5f) * spread;

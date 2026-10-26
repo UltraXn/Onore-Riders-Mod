@@ -44,7 +44,7 @@ public class LinearSparkParticle extends TextureSheetParticle {
 
         this.quadSize = 0.02F + (this.random.nextFloat() * 0.02F); // Based on FlyingSpark's ~0.03F
         this.lifetime = 10 + this.random.nextInt(15);
-        this.gravity = 0.5F; 
+        this.gravity = 0.5F;
         this.friction = 0.9F;
         this.hasPhysics = true;
 
@@ -78,8 +78,8 @@ public class LinearSparkParticle extends TextureSheetParticle {
         this.zo = this.z;
 
         float percentageTimeUntilDeath = (float) this.age / this.lifetime;
-        
-        // Spawn random companion flash particles, exactly as in particle-interactions 
+
+        // Spawn random companion flash particles, exactly as in particle-interactions
         if (
             this.random.nextFloat() > percentageTimeUntilDeath + 0.8f ||
             (this.random.nextFloat() * this.random.nextFloat() + this.xd*this.xd + this.yd*this.yd + this.zd*this.zd > 0.001)
@@ -91,10 +91,10 @@ public class LinearSparkParticle extends TextureSheetParticle {
             this.remove();
         } else {
             this.setSpriteFromAge(this.sprites);
-            
+
             this.yd -= 0.04D * (double)this.gravity;
             this.move(this.xd, this.yd, this.zd);
-            
+
             // Cooldown color: fade blue quickly to lose the white, then fade green to turn yellow into orange/red
             this.bCol = Math.max(0.0f, this.bCol - 0.2f);
             this.gCol = Math.max(0.2f, this.gCol - 0.08f);
@@ -134,7 +134,7 @@ public class LinearSparkParticle extends TextureSheetParticle {
         if (distance > 0.001f) {
             moveDir.normalize();
         } else {
-            moveDir.set(0, 1, 0); 
+            moveDir.set(0, 1, 0);
         }
 
         float pitch = (float) Math.asin(moveDir.y);
@@ -149,7 +149,7 @@ public class LinearSparkParticle extends TextureSheetParticle {
         Vector3f shapePos = new Vector3f(pos).add(prevPos).mul(0.5f);
 
         // Calculate stretch based on velocity to give it exactly that "FlyingSpark" scale multiplier
-        float stretchScale = Math.max(distance * 40.0f, 1.0f); 
+        float stretchScale = Math.max(distance * 40.0f, 1.0f);
 
         // Thin width (using average random scale 0.75) and long height proportional to distance
         float thickness = this.quadSize * 0.75f;

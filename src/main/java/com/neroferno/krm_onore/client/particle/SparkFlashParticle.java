@@ -22,7 +22,7 @@ public class SparkFlashParticle extends TextureSheetParticle {
         this.xd = (xSpeed / 2) + (Math.random() * 3.0 - 1.5) * 0.07 * (this.random.nextFloat() > 0.95 ? 2 : 1);
         this.yd = (ySpeed / 2) + (Math.random() * 3.0 - 1.5) * 0.07 * (this.random.nextFloat() > 0.95 ? 2 : 1);
         this.zd = (zSpeed / 2) + (Math.random() * 3.0 - 1.5) * 0.07 * (this.random.nextFloat() > 0.95 ? 2 : 1);
-        
+
         int rot = this.random.nextInt(4);
         this.roll = rot * (float)(Math.PI / 2);
         this.oRoll = this.roll;
