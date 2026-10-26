@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:package-name")
+
 package com.neroferno.krm_onore.engine
 
 import net.minecraft.resources.ResourceLocation
@@ -13,7 +15,7 @@ data class RiderSeries(
     val era: RiderEra,
     val driverSupplier: Supplier<out Item>?,
     val forms: Map<Int, RiderForm>,
-    val defaultFormId: Int
+    val defaultFormId: Int,
 ) {
     fun getForm(id: Int): RiderForm? = forms[id]
 }
@@ -21,7 +23,9 @@ data class RiderSeries(
 /**
  * DSL Builder for registering a Kamen Rider with all forms and finishers.
  */
-class RiderBuilder(val id: String) {
+class RiderBuilder(
+    val id: String,
+) {
     var era: RiderEra = RiderEra.HEISEI_PHASE_1
     var driverSupplier: Supplier<out Item>? = null
     var defaultFormId: Int = 1
@@ -33,22 +37,27 @@ class RiderBuilder(val id: String) {
         forms.putAll(scope.forms)
     }
 
-    fun build(): RiderSeries {
-        return RiderSeries(id, era, driverSupplier, forms, defaultFormId)
-    }
+    fun build(): RiderSeries = RiderSeries(id, era, driverSupplier, forms, defaultFormId)
 }
 
 class FormsScope {
     val forms = mutableMapOf<Int, RiderForm>()
 
-    fun form(id: Int, nameKey: String, block: FormBuilder.() -> Unit = {}) {
+    fun form(
+        id: Int,
+        nameKey: String,
+        block: FormBuilder.() -> Unit = {},
+    ) {
         val builder = FormBuilder(id, nameKey)
         builder.block()
         forms[id] = builder.build()
     }
 }
 
-class FormBuilder(val id: Int, val nameKey: String) {
+class FormBuilder(
+    val id: Int,
+    val nameKey: String,
+) {
     var stats = FormStats()
     var colorHex = 0xFFFFFF
     var modelLocation: ResourceLocation? = null
@@ -62,7 +71,7 @@ class FormBuilder(val id: Int, val nameKey: String) {
         toughness: Double = 0.0,
         speed: Double = 1.0,
         jump: Int = 0,
-        resistance: Int = 0
+        resistance: Int = 0,
     ) {
         this.stats = FormStats(hp, atk, def, toughness, speed, jump, resistance)
     }
@@ -75,7 +84,7 @@ class FormBuilder(val id: Int, val nameKey: String) {
         explosion: Boolean = true,
         explosionRadius: Float = 2.5f,
         voice: SoundEvent? = null,
-        impact: SoundEvent? = null
+        impact: SoundEvent? = null,
     ) {
         finishers.add(
             FinisherDefinition(
@@ -86,12 +95,10 @@ class FormBuilder(val id: Int, val nameKey: String) {
                 causesExplosion = explosion,
                 explosionRadius = explosionRadius,
                 voiceSound = voice,
-                impactSound = impact
-            )
+                impactSound = impact,
+            ),
         )
     }
 
-    fun build(): RiderForm {
-        return RiderForm(id, nameKey, stats, colorHex, modelLocation, textureLocation, finishers)
-    }
+    fun build(): RiderForm = RiderForm(id, nameKey, stats, colorHex, modelLocation, textureLocation, finishers)
 }
