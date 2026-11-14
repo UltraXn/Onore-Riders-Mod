@@ -45,6 +45,13 @@ public class ModNetwork {
                 ImpactVFXPacket::handle
         );
 
+        // Server -> Client: hit-stop de la animacion + temblor de camara al conectar un golpe
+        registrar.playToClient(
+                HitStopPacket.TYPE,
+                HitStopPacket.STREAM_CODEC,
+                HitStopPacket::handle
+        );
+
         // Client -> Server: Trigger an active combat ability
         registrar.playToServer(
                 AbilityPacket.TYPE,
@@ -92,6 +99,57 @@ public class ModNetwork {
                 SelectFormPacket.TYPE,
                 SelectFormPacket.STREAM_CODEC,
                 ModNetwork::handleSelectFormPacket
+        );
+
+        registrar.playToServer(
+                RightClickFistPacket.TYPE,
+                RightClickFistPacket.STREAM_CODEC,
+                RightClickFistPacket::handle
+        );
+
+        registrar.playToServer(
+                GrowingLeftAttackStartPacket.TYPE,
+                GrowingLeftAttackStartPacket.STREAM_CODEC,
+                GrowingLeftAttackStartPacket::handle
+        );
+
+        registrar.playToClient(
+                GrowingPunchAnimationPacket.TYPE,
+                GrowingPunchAnimationPacket.STREAM_CODEC,
+                GrowingPunchAnimationPacket::handle
+        );
+
+        registrar.playToClient(
+                GrowingSpecialAnimationPacket.TYPE,
+                GrowingSpecialAnimationPacket.STREAM_CODEC,
+                GrowingSpecialAnimationPacket::handle
+        );
+
+        // Server -> Client: jugador tumbado/levantado por el Especial 1 (para que vanilla no recalcule su pose)
+        registrar.playToClient(
+                GrabbedPoseSyncPacket.TYPE,
+                GrabbedPoseSyncPacket.STREAM_CODEC,
+                GrabbedPoseSyncPacket::handle
+        );
+
+        // Client -> Server: empezo/dejo de retroceder (S) para el bloqueo rapido
+        registrar.playToServer(
+                BackwardInputPacket.TYPE,
+                BackwardInputPacket.STREAM_CODEC,
+                BackwardInputPacket::handle
+        );
+
+        // Server -> Client: pose de block al bloquear un golpe retrocediendo
+        registrar.playToClient(
+                GrowingBlockAnimationPacket.TYPE,
+                GrowingBlockAnimationPacket.STREAM_CODEC,
+                GrowingBlockAnimationPacket::handle
+        );
+
+        registrar.playToClient(
+                RiderFistConfigSyncPacket.TYPE,
+                RiderFistConfigSyncPacket.STREAM_CODEC,
+                RiderFistConfigSyncPacket::handle
         );
 
         // Server -> Client: Sync Rider Energy

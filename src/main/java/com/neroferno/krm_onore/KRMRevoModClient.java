@@ -20,6 +20,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import com.neroferno.krm_onore.client.renderer.layer.SuitRenderLayer;
 import com.neroferno.krm_onore.client.renderer.layer.BeltRenderLayer;
+import com.neroferno.krm_onore.client.GrowingFistInputHandler;
 import com.neroferno.krm_onore.attachment.ModAttachments;
 import com.neroferno.krm_onore.attachment.RiderStateData;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -45,7 +46,6 @@ import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.minecraft.client.player.Input;
 import net.neoforged.neoforge.client.event.RenderArmEvent;
 import com.neroferno.krm_onore.client.renderer.SuitVisualRenderer;
-import com.neroferno.krm_onore.item.ModItems;
 import com.neroferno.krm_onore.item.SuitVisualItem;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -79,6 +79,10 @@ public class KRMRevoModClient {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
+            net.bettercombat.api.client.BetterCombatClientEvents.ATTACK_START.register((player, attackHand) -> {
+                GrowingFistInputHandler.onLeftClickStart(player);
+            });
+
             PlayerAnimationAccess.REGISTER_ANIMATION_EVENT.register((player, animationStack) -> {
                 ModifierLayer<dev.kosmx.playerAnim.api.layered.IAnimation> layer = new ModifierLayer<>();
                 animationStack.addAnimLayer(1500, layer);
@@ -94,6 +98,9 @@ public class KRMRevoModClient {
         event.register(ModKeybindings.TRANSFORM_KEY);
         event.register(ModKeybindings.ABILITY_KEY);
         event.register(ModKeybindings.SKILL_TREE_KEY);
+        event.register(ModKeybindings.SPECIAL3_KEY);
+        event.register(ModKeybindings.SPECIAL1_KEY);
+        event.register(ModKeybindings.SPECIAL2_KEY);
         KRMRevoMod.LOGGER.info("Onore Rider — Keybindings registered.");
     }
 
@@ -142,6 +149,10 @@ class KRMRevoGameClientEvents {
     private static SuitVisualRenderer firstPersonSuitRenderer;
     private static ItemStack firstPersonDummySuit;
     // DEBUG temporal de la mano en primera persona (quitar cuando se resuelva)
+    /** Especial 1: ventana maxima entre las dos pulsaciones de su tecla, en ticks (0.4 s). */
+    private static final int DOUBLE_TAP_TICKS = 8;
+    private static long lastSpecial1Press = Long.MIN_VALUE / 2;
+
     private static final boolean FP_ARM_DEBUG = false;
     private static long fpArmLastLogTick = -100;
     // Tick de kuuga_transform en el que arranca el sonido (0.5 s * 20). Igual que CORE_FADE_START_TICKS.
@@ -206,8 +217,8 @@ class KRMRevoGameClientEvents {
 
         if (firstPersonSuitRenderer == null) {
             firstPersonSuitRenderer = new SuitVisualRenderer();
-            firstPersonDummySuit = new ItemStack(ModItems.KUUGA_SUIT_VISUAL.get());
         }
+        firstPersonDummySuit = SuitRenderLayer.getSuitStack(player);
 
         HumanoidArm arm = event.getArm();
         PoseStack poseStack = event.getPoseStack();
@@ -313,6 +324,28 @@ class KRMRevoGameClientEvents {
 
         boolean lockForTransformation = transforming
                 && riderState.getTransformAnimationTicks() != TransformationHelper.TRANSFORM_ANIMATION_FAST_TICKS;
+        if (player instanceof LocalPlayer rooted && GrowingFistInputHandler.isRooted(rooted)) {
+            Input input = event.getInput();
+            if (input != null) {
+                if (GrowingFistInputHandler.consumeRootedJumpPress(input.jumping)) {
+                    PacketDistributor.sendToServer(new AbilityPacket("cancel_especial1"));
+                }
+                GrowingFistInputHandler.suppressJumpUntilReleased(input.jumping);
+                input.left = false;
+                input.right = false;
+                input.up = false;
+                input.down = false;
+                input.leftImpulse = 0.0F;
+                input.forwardImpulse = 0.0F;
+                input.jumping = false;
+                input.shiftKeyDown = false;
+            }
+        } else {
+            Input input = event.getInput();
+            if (input != null && GrowingFistInputHandler.suppressJumpUntilReleased(input.jumping)) {
+                input.jumping = false;
+            }
+        }
         if (lockForTransformation || (riderState != null && riderState.getRiderKickState() > 0)) {
             Input input = event.getInput();
             if (input != null) {
@@ -428,6 +461,19 @@ class KRMRevoGameClientEvents {
                     player.setDeltaMovement(Vec3.ZERO);
                 }
 
+                // Especial 1: dos pulsaciones seguidas de su tecla. El servidor revisa que haya un enemigo al frente.
+                while (ModKeybindings.SPECIAL1_KEY.consumeClick()) {
+                    long gameTime = localPlayer.level().getGameTime();
+                    if (gameTime - lastSpecial1Press <= DOUBLE_TAP_TICKS) {
+                        lastSpecial1Press = Long.MIN_VALUE / 2;
+                        if (localPlayer.getMainHandItem().isEmpty() && TransformationHelper.isTransformed(localPlayer)) {
+                            PacketDistributor.sendToServer(new AbilityPacket("especial1"));
+                        }
+                    } else {
+                        lastSpecial1Press = gameTime;
+                    }
+                }
+
                 if (ModKeybindings.TRANSFORM_KEY.consumeClick()) {
                     Input input = localPlayer.input;
                     boolean moving = localPlayer.isSprinting()
@@ -439,6 +485,19 @@ class KRMRevoGameClientEvents {
                     // Abilities only work when no weapon is equipped (per design doc) and player is transformed
                     if (localPlayer.getMainHandItem().isEmpty() && TransformationHelper.isTransformed(localPlayer)) {
                         PacketDistributor.sendToServer(new AbilityPacket("rider_kick"));
+                    }
+                }
+
+                if (ModKeybindings.SPECIAL3_KEY.consumeClick()) {
+                    if (localPlayer.getMainHandItem().isEmpty() && TransformationHelper.isTransformed(localPlayer)) {
+                        PacketDistributor.sendToServer(new AbilityPacket("especial3"));
+                    }
+                }
+
+                if (ModKeybindings.SPECIAL2_KEY.consumeClick()) {
+                    // Solo sin arma equipada (las manos vacias tambien las revisa el servidor).
+                    if (localPlayer.getMainHandItem().isEmpty() && TransformationHelper.isTransformed(localPlayer)) {
+                        PacketDistributor.sendToServer(new AbilityPacket("especial2"));
                     }
                 }
 

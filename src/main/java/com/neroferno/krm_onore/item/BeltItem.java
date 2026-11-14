@@ -16,6 +16,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import software.bernie.geckolib.animatable.GeoItem;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import com.neroferno.krm_onore.combat.RiderFistTiming;
 import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.PlayState;
@@ -98,6 +99,27 @@ public class BeltItem extends Item implements GeoItem {
             state.getController().setAnimation(RawAnimation.begin().thenLoop(idleAnimation));
             return PlayState.CONTINUE;
         }));
+        controllers.add(new AnimationController<>(this, "punch_controller", RiderFistTiming.DEFAULT_ANIMATION_BLEND_TICKS, state -> PlayState.STOP)
+                .triggerableAnim("punch", RawAnimation.begin().thenPlay("animation.punch"))
+                .triggerableAnim("punch2", RawAnimation.begin().thenPlay("animation.punch2"))
+                .triggerableAnim("punch1L", RawAnimation.begin().thenPlay("animation.punch1L"))
+                .triggerableAnim("punch2L", RawAnimation.begin().thenPlay("animation.punch2L"))
+                .triggerableAnim("punch3L", RawAnimation.begin().thenPlay("animation.punch3L"))
+                .triggerableAnim("punch1H", RawAnimation.begin().thenPlay("animation.punch1H"))
+                .triggerableAnim("punch2H", RawAnimation.begin().thenPlay("animation.punch2H"))
+                .triggerableAnim("punch3H", RawAnimation.begin().thenPlay("animation.punch3H"))
+                .triggerableAnim("kick", RawAnimation.begin().thenPlay("animation.kick"))
+                .triggerableAnim("especial1_1", RawAnimation.begin().thenPlayAndHold("animation.especial1_1"))
+                .triggerableAnim("especial1_2", RawAnimation.begin().thenPlay("animation.especial1_2"))
+                .triggerableAnim("especial1_loop", RawAnimation.begin().thenLoop("animation.especial1_loop"))
+                .triggerableAnim("especial1_end", RawAnimation.begin().thenPlay("animation.especial1_end"))
+                .triggerableAnim("especial1_cancel", RawAnimation.begin().thenPlay("animation.especial1_cancel"))
+                .triggerableAnim("especial2_1", RawAnimation.begin().thenPlay("animation.especial2_1"))
+                .triggerableAnim("especial2_2", RawAnimation.begin().thenPlay("animation.especial2_2"))
+                .triggerableAnim("especial2_cancel", RawAnimation.begin().thenPlay("animation.especial2_cancel"))
+                .triggerableAnim("especial3", RawAnimation.begin().thenPlay("animation.especial3"))
+                .triggerableAnim("block_hold", RawAnimation.begin().thenPlayAndHold("animation.block_hold"))
+                .triggerableAnim("block_release", RawAnimation.begin().thenPlay("animation.block_release")));
     }
 
     @Override

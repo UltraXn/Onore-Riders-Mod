@@ -127,7 +127,7 @@ public class TransformVFXHelper {
             double vy = dir.y * 0.8 + (ThreadLocalRandom.current().nextFloat() - 0.5f) * spread + 0.2;
             double vz = dir.z * 0.8 + (ThreadLocalRandom.current().nextFloat() - 0.5f) * spread;
 
-            // Only spawn the custom stretched spark, no bouncy round dots
+            engine.createParticle(ParticleTypes.CRIT, x, y, z, vx, vy, vz);
             engine.createParticle(ModParticles.LINEAR_SPARK.get(), x, y, z, vx, vy, vz);
         }
     }

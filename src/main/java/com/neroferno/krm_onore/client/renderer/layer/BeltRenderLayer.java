@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.neroferno.krm_onore.attachment.ModAttachments;
 import com.neroferno.krm_onore.client.renderer.BeltArmorRenderer;
 import com.neroferno.krm_onore.client.renderer.SuitVisualRenderer;
+import com.neroferno.krm_onore.combat.RiderFistTiming;
 import com.neroferno.krm_onore.item.BeltItem;
 import com.neroferno.krm_onore.item.ModItems;
 import com.neroferno.krm_onore.network.TransformationHelper;
@@ -17,9 +18,13 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import software.bernie.geckolib.GeckoLibConstants;
+import software.bernie.geckolib.animatable.GeoItem;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 @SuppressWarnings({"null", "removal"})
 public class BeltRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
@@ -28,6 +33,13 @@ public class BeltRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
     // rebuild a fresh GeckoLib renderer for whichever Driver is equipped
     // (currently the Arcle Driver).
     private final Map<Item, BeltArmorRenderer> rendererCache = new IdentityHashMap<>();
+    private static final AtomicLong NEXT_ANIMATABLE_ID = new AtomicLong(Long.MAX_VALUE - 2_000_000L);
+
+    // Ultimo tick de juego en que el cinturon de cada jugador se dibujo. En primera persona (o con el jugador
+    // fuera de camara) esta capa no se renderiza, y GeckoLib solo procesa los controladores al dibujar.
+    private static final Map<AbstractClientPlayer, Long> LAST_RENDER_TICK = new WeakHashMap<>();
+    // Si pasan mas ticks que estos sin dibujarse, al volver se salta el blend para no ver el "giro" de ajuste.
+    private static final long RESUME_GAP_TICKS = 2L;
 
     // Core off -> growing fade, synced to kuuga_transform (ticks since the animation started on the client).
     // Starts at t = 0.5 s of kuuga_transform (0.5 s * 20 = 10 ticks).
@@ -46,6 +58,59 @@ public class BeltRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
         super(pRenderer);
     }
 
+    public static void playGrowingPunch(AbstractClientPlayer player, String animation) {
+        playGrowingAnimation(player, animation);
+    }
+
+    public static void playGrowingKick(AbstractClientPlayer player) {
+        playGrowingPunch(player, "kick");
+    }
+
+    private static void playGrowingAnimation(AbstractClientPlayer player, String animation) {
+        if (!player.hasData(ModAttachments.RIDER_INVENTORY)) return;
+        // En primera persona el cinturon no se dibuja: GeckoLib dejaria el golpe en cola y lo reproduciria
+        // desde cero al cambiar a tercera persona (el cinturon "gira" para acomodarse al cuerpo).
+        if (isLocalFirstPerson(player)) return;
+
+        ItemStackHandler inventory = player.getData(ModAttachments.RIDER_INVENTORY);
+        ItemStack beltStack = inventory.getStackInSlot(0);
+        if (beltStack.isEmpty() || !(beltStack.getItem() instanceof BeltItem beltItem)) return;
+
+        ensureAnimatableId(beltStack);
+        var manager = beltItem.getAnimatableInstanceCache().getManagerForId(GeoItem.getId(beltStack));
+        var controller = manager.getAnimationControllers().get("punch_controller");
+        if (controller != null) {
+            controller.transitionLength(RiderFistTiming.animationBlendTicks());
+        }
+        beltItem.triggerArmorAnim(player, GeoItem.getId(beltStack), "punch_controller", animation);
+    }
+
+    private static boolean isLocalFirstPerson(AbstractClientPlayer player) {
+        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+        return player == minecraft.player && minecraft.options.getCameraType().isFirstPerson();
+    }
+
+    /** Hit-stop: congela (o reanuda) el controlador de golpes del cinturon. */
+    public static void setAnimationFrozen(AbstractClientPlayer player, boolean frozen) {
+        if (!player.hasData(ModAttachments.RIDER_INVENTORY)) return;
+
+        ItemStack beltStack = player.getData(ModAttachments.RIDER_INVENTORY).getStackInSlot(0);
+        if (beltStack.isEmpty() || !(beltStack.getItem() instanceof BeltItem beltItem)) return;
+
+        var manager = beltItem.getAnimatableInstanceCache().getManagerForId(GeoItem.getId(beltStack));
+        var controller = manager.getAnimationControllers().get("punch_controller");
+        if (controller != null) {
+            controller.transitionLength(RiderFistTiming.animationBlendTicks());
+            controller.setAnimationSpeed(frozen ? 0.0001D : 1.0D);
+        }
+    }
+
+    private static void ensureAnimatableId(ItemStack stack) {
+        if (GeoItem.getId(stack) == Long.MAX_VALUE) {
+            stack.set(GeckoLibConstants.STACK_ANIMATABLE_ID_COMPONENT.get(), NEXT_ANIMATABLE_ID.getAndIncrement());
+        }
+    }
+
     @Override
     public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, AbstractClientPlayer player, float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
         // 1. Only render if a belt is equipped in the custom inventory slots
@@ -54,6 +119,32 @@ public class BeltRenderLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
 
         if (beltStack.isEmpty() || !(beltStack.getItem() instanceof BeltItem beltItem)) return;
 
+        ensureAnimatableId(beltStack);
+
+        // Si el cinturon estuvo varios ticks sin dibujarse (primera persona, fuera de camara), el controlador de
+        // golpes conserva la pose del ultimo frame dibujado y la mezcla hacia el reposo se ve como un giro raro.
+        // En el primer frame tras la pausa se salta esa mezcla (transicion 0) y se restaura al terminar.
+        long gameTime = player.level().getGameTime();
+        Long lastRender = LAST_RENDER_TICK.put(player, gameTime);
+        boolean resumedAfterGap = lastRender != null && gameTime - lastRender > RESUME_GAP_TICKS;
+        var punchController = resumedAfterGap
+                ? beltItem.getAnimatableInstanceCache().getManagerForId(GeoItem.getId(beltStack))
+                        .getAnimationControllers().get("punch_controller")
+                : null;
+        if (punchController != null) {
+            punchController.transitionLength(0);
+        }
+        try {
+            renderBelt(poseStack, buffer, packedLight, player, partialTick, beltStack, beltItem);
+        } finally {
+            if (punchController != null) {
+                punchController.transitionLength(RiderFistTiming.animationBlendTicks());
+            }
+        }
+    }
+
+    private void renderBelt(PoseStack poseStack, MultiBufferSource buffer, int packedLight, AbstractClientPlayer player,
+                            float partialTick, ItemStack beltStack, BeltItem beltItem) {
         poseStack.pushPose();
 
         // Sync player body rotations to the GeckoLib renderer

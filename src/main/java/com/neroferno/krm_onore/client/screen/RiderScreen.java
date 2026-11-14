@@ -2,13 +2,13 @@ package com.neroferno.krm_onore.client.screen;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.neroferno.krm_onore.KRMRevoMod;
+import com.neroferno.krm_onore.client.gui.RiderEnergyOverlay;
+import com.neroferno.krm_onore.item.ModItems;
 import com.neroferno.krm_onore.menu.RiderMenu;
 import com.neroferno.krm_onore.network.SelectFormPacket;
 import com.neroferno.krm_onore.network.TransformationHelper;
-import com.neroferno.krm_onore.network.UnequipBeltPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -25,10 +25,10 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
     // Textures provided in assets/gui
     private static final ResourceLocation TEXTURE_MARCO =
             ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/marco.png");
-    private static final ResourceLocation TEXTURE_SKILLS =
-            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/skills_display.png");
-    private static final ResourceLocation TEXTURE_STATS =
-            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/stats_display.png");
+    private static final ResourceLocation BUTTON_IDLE =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/button_idle.png");
+    private static final ResourceLocation BUTTON_HOVER =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/button_hover.png");
     private static final ResourceLocation GROWING_ICON =
             ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/hud/growing_icon.png");
     private static final ResourceLocation MIGHTY_ICON =
@@ -57,19 +57,6 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         // Hide standard labels outside visible area
         this.titleLabelX = 10000;
         this.inventoryLabelX = 10000;
-
-        int x = (width - imageWidth) / 2;
-        int y = (height - imageHeight) / 2;
-
-        // "Unequip Belt" button situated in the right-bottom action compartment
-        this.addRenderableWidget(Button.builder(
-                Component.translatable("gui.krm_revo.skill_tree.unequip"),
-                button -> {
-                    PacketDistributor.sendToServer(new UnequipBeltPacket());
-                    this.onClose();
-                })
-                .bounds(x + 272, y + 160, 60, 20)
-                .build());
     }
 
     @Override
@@ -84,16 +71,48 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         guiGraphics.blit(TEXTURE_MARCO, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
         RenderSystem.disableBlend();
 
-        // 1. Render Backgrounds inside each compartment
+        int buttonX = x + 192;
+        int buttonY = y + 28;
+        ResourceLocation buttonTexture = pMouseX >= buttonX && pMouseX < buttonX + 75
+                && pMouseY >= buttonY && pMouseY < buttonY + 19 ? BUTTON_HOVER : BUTTON_IDLE;
+        guiGraphics.blit(buttonTexture, buttonX, buttonY, 0, 0, 75, 19, 75, 19);
 
-        // Center Panel (Skill Tree backdrop): x=90..257, y=17..191 (w=168, h=175)
-        guiGraphics.blit(TEXTURE_SKILLS, x + 90, y + 17, 0, 0, 168, 175, 175, 180);
+        int leftButtonX = buttonX - 76;
+        ResourceLocation leftButtonTexture = pMouseX >= leftButtonX && pMouseX < leftButtonX + 75
+                && pMouseY >= buttonY && pMouseY < buttonY + 19 ? BUTTON_HOVER : BUTTON_IDLE;
+        guiGraphics.blit(leftButtonTexture, leftButtonX, buttonY, 0, 0, 75, 19, 75, 19);
+        guiGraphics.renderItem(ModItems.ARCLE_DRIVER.get().getDefaultInstance(), leftButtonX + 2, buttonY + 1);
 
-        // Right-Top Panel (Stats backdrop): x=269..333, y=17..100 (w=65, h=84)
-        guiGraphics.blit(TEXTURE_STATS, x + 269, y + 17, 0, 0, 65, 84, 79, 85);
+        String driverName = "Arcle Driver";
+        float driverNameScale = Math.min(1.0F, 49.0F / font.width(driverName));
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(leftButtonX + 21, buttonY + 6, 0);
+        guiGraphics.pose().scale(driverNameScale, driverNameScale, 1.0F);
+        guiGraphics.drawString(font, driverName, 0, 0, 0xFFE6E7F0, false);
+        guiGraphics.pose().popPose();
 
-        // Right-Bottom Panel (Action & Status area): x=269..333, y=105..191 (w=65, h=86)
-        guiGraphics.fill(x + 269, y + 105, x + 333, y + 191, 0xFF242424);
+        if (this.minecraft != null && this.minecraft.player != null
+                && TransformationHelper.isTransformed(this.minecraft.player)
+                && this.minecraft.player.hasData(ModAttachments.RIDER_STATE)) {
+            int form = this.minecraft.player.getData(ModAttachments.RIDER_STATE).getForm();
+            if (form == 1 || form == 2) {
+                ResourceLocation formIcon = form == 1 ? GROWING_ICON : MIGHTY_ICON;
+                String formName = form == 1 ? "Growin Form" : "Mighty Form";
+                int iconSize = 13;
+                int contentGap = 3;
+                int textWidth = font.width(formName);
+                float textScale = Math.min(1.0F, 48.0F / textWidth);
+                int contentWidth = iconSize + contentGap + (int) (textWidth * textScale);
+                int contentX = buttonX + (75 - contentWidth) / 2;
+                guiGraphics.blit(formIcon, contentX, buttonY + 3, iconSize, iconSize, 0, 0, 34, 32, 34, 32);
+
+                guiGraphics.pose().pushPose();
+                guiGraphics.pose().translate(contentX + iconSize + contentGap, buttonY + 6, 0);
+                guiGraphics.pose().scale(textScale, textScale, 1.0F);
+                guiGraphics.drawString(font, formName, 0, 0, 0xFFE6E7F0, false);
+                guiGraphics.pose().popPose();
+            }
+        }
 
         String riderTitle = "KAMEN RIDER KUUGA";
         int iconWidth = 14;
@@ -116,20 +135,45 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         // 3. Render 3D Player Avatar Preview in the top-left compartment
         if (this.minecraft != null && this.minecraft.player != null) {
             InventoryScreen.renderEntityInInventoryFollowsMouse(
-                    guiGraphics, x + 18, y + 18, x + 76, y + 162, 54, 0.0f, pMouseX, pMouseY, this.minecraft.player
+                    guiGraphics, x + 28, y + 18, x + 86, y + 162, 54, 0.0f, pMouseX, pMouseY, this.minecraft.player
             );
         }
 
         // Show the active Rider form in the frame's lower-left inset; keep it empty when civil.
-        if (this.minecraft != null && this.minecraft.player != null
-                && TransformationHelper.isTransformed(this.minecraft.player)) {
-            int form = this.minecraft.player.hasData(ModAttachments.RIDER_STATE)
-                    ? this.minecraft.player.getData(ModAttachments.RIDER_STATE).getForm()
-                    : 0;
-            if (form == 1 || form == 2) {
+        if (this.minecraft != null && this.minecraft.player != null) {
+            var player = this.minecraft.player;
+            boolean isTransformed = TransformationHelper.isTransformed(player);
+            int form = player.hasData(ModAttachments.RIDER_STATE)
+                    ? player.getData(ModAttachments.RIDER_STATE).getForm()
+                    : 1;
+
+            if (isTransformed && (form == 1 || form == 2)) {
                 ResourceLocation formIcon = form == 1 ? GROWING_ICON : MIGHTY_ICON;
                 guiGraphics.blit(formIcon, x + 1, y + 145, 0, 0, 34, 32, 34, 32);
+
+                String formName = form == 1 ? "Growin Form" : "Mighty Form";
+                int formNameWidth = font.width(formName);
+                float formNameScale = Math.min(1.2F, 58.0F / formNameWidth);
+                guiGraphics.pose().pushPose();
+                guiGraphics.pose().translate(x + 40, y + 170, 0);
+                guiGraphics.pose().scale(formNameScale, formNameScale, 1.0F);
+                guiGraphics.drawString(font, formName, 0, 0, 0xFFE6E7F0, false);
+                guiGraphics.pose().popPose();
             }
+
+            var energyData = player.getData(ModAttachments.RIDER_ENERGY);
+            guiGraphics.drawString(font, "Energia Amadam", x + 10, y + 188, 0xFFE6E7F0, false);
+            RiderEnergyOverlay.renderEnergyBar(
+                    guiGraphics, x + 10, y + 202, 63, 6,
+                    energyData.getPercentage(), isTransformed, form, 5
+            );
+
+            String energyAmount = Math.round(energyData.getPercentage() * 100.0F) + "%";
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(x + 77, y + 201, 0);
+            guiGraphics.pose().scale(1.0F, 1.0F, 1.0F);
+            guiGraphics.drawString(font, energyAmount, 0, 0, 0xFFE6E7F0, false);
+            guiGraphics.pose().popPose();
         }
 
         // 4. Render Form Selection Buttons on the Top Bar
@@ -152,69 +196,6 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
             guiGraphics.fill(x + 145, y + 15, x + 145 + 26, y + 16, 0xFFFF3333);
         }
 
-        // 5. Render Central Panel (Skill Tree & Abilities)
-        if (currentForm == 1) {
-            guiGraphics.drawCenteredString(font, "§f§lKUUGA — GROWING", x + 174, y + 23, 0xFFFFFF);
-            guiGraphics.drawCenteredString(font, "§7[ Forma Blanca Inicial ]", x + 174, y + 34, 0xAAAAAA);
-        } else {
-            guiGraphics.drawCenteredString(font, "§c§lKUUGA — MIGHTY", x + 174, y + 23, 0xFF4444);
-            guiGraphics.drawCenteredString(font, "§6[ Dominio de Fuego / Rojo ]", x + 174, y + 34, 0xFFAA00);
-        }
-
-        // Ability Card 1: Rider Kick
-        renderSkillCard(guiGraphics, x + 97, y + 48, 154, 36,
-                "§e⚡ RIDER KICK §7[Tecla V]",
-                "§fPatada en salto de impacto directo",
-                "§a✔ Desbloqueado §7| §e10s CD");
-
-        // Ability Card 2: Rider Melee Combos
-        renderSkillCard(guiGraphics, x + 97, y + 88, 154, 36,
-                "§c🥊 COMBATE FÍSICO §7[Desarmado]",
-                "§fCadena fluida de 5 golpes marciales",
-                currentForm == 1 ? "§7Daño: §f5.0 §7| Empuje medio" : "§7Daño: §c7.0 §7| Sin empuje extra");
-
-        // Ability Card 3: Arcle Power
-        renderSkillCard(guiGraphics, x + 97, y + 128, 154, 36,
-                "§b🔷 PODER DE ARCLE §7[Pasiva]",
-                "§fInmunidad a daño de caída en patada",
-                "§a✔ Resonancia Amadam Activa");
-
-        // Center Footer Stats
-        guiGraphics.drawString(font, "§a★ SP: §f5", x + 99, y + 172, 0xFFFFFF);
-        String levelStr = "§eNivel Kuuga: §f1";
-        guiGraphics.drawString(font, levelStr, x + 250 - font.width(levelStr), y + 172, 0xFFFFFF);
-
-        // 6. Render Right-Top Panel (Stats)
-        guiGraphics.drawCenteredString(font, "§6§lSTATS", x + 301, y + 21, 0xFFFF55);
-        guiGraphics.drawString(font, "§c❤ HP: §f100", x + 274, y + 36, 0xFFFFFF);
-        guiGraphics.drawString(font, currentForm == 1 ? "§e⚔ ATK: §f5" : "§e⚔ ATK: §f7", x + 274, y + 50, 0xFFFFFF);
-        guiGraphics.drawString(font, currentForm == 1 ? "§9🛡 DEF: §f10" : "§9🛡 DEF: §f15", x + 274, y + 64, 0xFFFFFF);
-        guiGraphics.drawString(font, currentForm == 1 ? "§a⚡ SPD: §f+0%" : "§a⚡ SPD: §f+15%", x + 274, y + 78, 0xFFFFFF);
-
-        // 7. Render Right-Bottom Panel (Status)
-        guiGraphics.drawCenteredString(font, "§e§lESTADO", x + 301, y + 112, 0xFFFFAA);
-        boolean isTransformed = this.minecraft != null && this.minecraft.player != null
-                && TransformationHelper.isTransformed(this.minecraft.player);
-        if (isTransformed) {
-            guiGraphics.drawCenteredString(font, "§a● ACTIVO", x + 301, y + 126, 0x55FF55);
-            guiGraphics.drawCenteredString(font, currentForm == 1 ? "§fForma: Growing" : "§cForma: Mighty", x + 301, y + 139, 0xFFFFFF);
-        } else {
-            guiGraphics.drawCenteredString(font, "§7○ CIVIL", x + 301, y + 126, 0xAAAAAA);
-            guiGraphics.drawCenteredString(font, "§8Presiona [K]", x + 301, y + 139, 0x888888);
-        }
-
-    }
-
-    private void renderSkillCard(GuiGraphics g, int cx, int cy, int cw, int ch, String title, String desc, String footer) {
-        g.fill(cx, cy, cx + cw, cy + ch, 0xFF181818);
-        g.fill(cx, cy, cx + cw, cy + 1, 0xFF353535);
-        g.fill(cx, cy + ch - 1, cx + cw, cy + ch, 0xFF101010);
-        g.fill(cx, cy, cx + 1, cy + ch, 0xFF353535);
-        g.fill(cx + cw - 1, cy, cx + cw, cy + ch, 0xFF101010);
-
-        g.drawString(font, title, cx + 6, cy + 4, 0xFFFFFF);
-        g.drawString(font, desc, cx + 6, cy + 15, 0xAAAAAA);
-        g.drawString(font, footer, cx + 6, cy + 25, 0x888888);
     }
 
     @Override
@@ -256,58 +237,6 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
             guiGraphics.renderTooltip(font, Component.literal("§fKuuga — Forma Growing §7(Blanco Inicial)"), mouseX, mouseY);
         } else if (mouseX >= x + 145 && mouseX < x + 145 + 26 && mouseY >= y + 3 && mouseY < y + 3 + 14) {
             guiGraphics.renderTooltip(font, Component.literal("§cKuuga — Forma Mighty §7(Poder del Fuego)"), mouseX, mouseY);
-        }
-        // Card 1: Rider Kick
-        else if (mouseX >= x + 97 && mouseX < x + 97 + 154 && mouseY >= y + 48 && mouseY < y + 48 + 36) {
-            java.util.List<Component> tooltip = java.util.List.of(
-                    Component.literal("§e⚡ RIDER KICK"),
-                    Component.literal("§7Patada aérea de combate con remate explosivo."),
-                    Component.literal("§c• Daño Base: §f30.0"),
-                    Component.literal("§e• Enfriamiento: §f10 segundos"),
-                    Component.literal("§b• Alcance: §fObjetivo en mira hasta 20m")
-            );
-            guiGraphics.renderComponentTooltip(font, tooltip, mouseX, mouseY);
-        }
-        // Card 2: Combate Físico
-        else if (mouseX >= x + 97 && mouseX < x + 97 + 154 && mouseY >= y + 88 && mouseY < y + 88 + 36) {
-            java.util.List<Component> tooltip = java.util.List.of(
-                    Component.literal("§c🥊 COMBATE FÍSICO DESARMADO"),
-                    Component.literal("§7Cadena fluida de 5 ataques marciales:"),
-                    Component.literal("§8  1-2. Golpes directos"),
-                    Component.literal("§8  3-4. Patadas de intercepción"),
-                    Component.literal("§8  5. Patada giratoria de remate"),
-                    Component.literal("§a• Efecto: §fPermite encadenar con Rider Kick")
-            );
-            guiGraphics.renderComponentTooltip(font, tooltip, mouseX, mouseY);
-        }
-        // Card 3: Núcleo Arcle
-        else if (mouseX >= x + 97 && mouseX < x + 97 + 154 && mouseY >= y + 128 && mouseY < y + 128 + 36) {
-            java.util.List<Component> tooltip = java.util.List.of(
-                    Component.literal("§b🔷 PODER DE ARCLE (AMADAM)"),
-                    Component.literal("§7La piedra sagrada Amadam absorbe la fuerza"),
-                    Component.literal("§7del impacto cinético durante las patadas."),
-                    Component.literal("§a• Pasiva: §fInmunidad total a daño de caída en patadas")
-            );
-            guiGraphics.renderComponentTooltip(font, tooltip, mouseX, mouseY);
-        }
-        // Right-Top: Stats Panel
-        else if (mouseX >= x + 269 && mouseX < x + 333 && mouseY >= y + 17 && mouseY < y + 100) {
-            int currentForm = (this.minecraft != null && this.minecraft.player != null && this.minecraft.player.hasData(ModAttachments.RIDER_STATE))
-                    ? this.minecraft.player.getData(ModAttachments.RIDER_STATE).getForm() : 0;
-            java.util.List<Component> tooltip = java.util.List.of(
-                    Component.literal("§6§lATRIBUTOS DE KUUGA"),
-                    Component.literal("§c❤ Salud (HP): §f100 puntos vitales"),
-                    Component.literal(currentForm == 1
-                            ? "§e⚔ Ataque (ATK): §f5.0 §7(Desarmado Growing)"
-                            : "§e⚔ Ataque (ATK): §f7.0 §7(Desarmado Mighty)"),
-                    Component.literal(currentForm == 1
-                            ? "§9🛡 Defensa (DEF): §f10 §7(Armadura Blindada)"
-                            : "§9🛡 Defensa (DEF): §f15 §7(Armadura Blindada)"),
-                    Component.literal(currentForm == 1
-                            ? "§a⚡ Velocidad (SPD): §f+0% §7(Base)"
-                            : "§a⚡ Velocidad (SPD): §f+15% §7(Agilidad Arcle)")
-            );
-            guiGraphics.renderComponentTooltip(font, tooltip, mouseX, mouseY);
         }
     }
 }

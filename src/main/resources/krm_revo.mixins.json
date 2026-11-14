@@ -7,10 +7,14 @@
   "mixins": [
     "WeaponRegistryMixin",
     "WeaponRegistryAccessor",
-    "InventoryPickupMixin"
+    "RiderFistCooldownMixin",
+    "InventoryPickupMixin",
+    "LivingEntityJumpMixin",
+    "PlayerPoseMixin"
   ],
   "client": [
     "client.ClientWeaponRegistryMixin",
+    "client.GrowingSuitPunchAnimationMixin",
     "client.HumanoidArmorLayerMixin",
     "client.CapeLayerMixin",
     "client.ElytraLayerMixin",

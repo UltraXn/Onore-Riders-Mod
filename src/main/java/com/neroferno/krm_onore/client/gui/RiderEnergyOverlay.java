@@ -2,6 +2,8 @@ package com.neroferno.krm_onore.client.gui;
 
 import com.neroferno.krm_onore.attachment.ModAttachments;
 import com.neroferno.krm_onore.attachment.RiderEnergyData;
+import com.neroferno.krm_onore.combat.RiderLowHealth;
+import com.neroferno.krm_onore.combat.RiderStarvation;
 import com.neroferno.krm_onore.network.TransformationHelper;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -21,10 +23,15 @@ public class RiderEnergyOverlay {
     private static final ResourceLocation MIGHTY_ICON =
             ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/hud/mighty_icon.png");
 
+    /** Poca vida (con histeresis); mismo calculo que el servidor para que el parpadeo coincida con el drenaje. */
+    private static boolean lowHealth;
+
     public static void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
-        if (player == null || mc.options.hideGui) return;
+        if (player == null) return;
+        lowHealth = RiderLowHealth.next(lowHealth, player.getHealth(), player.getMaxHealth());
+        if (mc.options.hideGui) return;
 
         // Only display the overlay if a belt is equipped or the player is currently transformed
         boolean isTransformed = TransformationHelper.isTransformed(player);
@@ -58,12 +65,35 @@ public class RiderEnergyOverlay {
             guiGraphics.blit(formIcon, iconX, iconY, iconWidth, iconHeight, 0, 0, 34, 32, 34, 32);
         }
 
-        // 2. Render Outer Metallic Frame for Energy Bar
+        // Aviso: poca vida (se drena energia) o sin muslones de comida (cuenta atras para destransformarse).
+        boolean lowHealthWarning = isTransformed && (lowHealth || RiderStarvation.isStarving(player));
+        renderEnergyBar(guiGraphics, x, y, barWidth, barHeight, ratio, isTransformed, form, 4, lowHealthWarning);
+
+        // Keep the percentage inside the group's width, above the icon and bar.
+        String text = String.format("%.0f%%", ratio * 100.0f);
+        int textX = groupX + groupWidth - mc.font.width(text);
+        int textY = iconY - mc.font.lineHeight;
+        boolean blinkOn = (System.currentTimeMillis() / 250) % 2 == 0;
+        int textColor = lowHealthWarning && blinkOn ? 0xFFFF1744 : 0xFFE0E0E0;
+        guiGraphics.drawString(mc.font, text, textX, textY, textColor, true);
+    }
+
+    public static void renderEnergyBar(
+            GuiGraphics guiGraphics, int x, int y, int barWidth, int barHeight,
+            float ratio, boolean isTransformed, int form, int segments
+    ) {
+        renderEnergyBar(guiGraphics, x, y, barWidth, barHeight, ratio, isTransformed, form, segments, false);
+    }
+
+    /** lowHealthWarning: la barra parpadea en rojo (poca vida: la energia se esta drenando). */
+    public static void renderEnergyBar(
+            GuiGraphics guiGraphics, int x, int y, int barWidth, int barHeight,
+            float ratio, boolean isTransformed, int form, int segments, boolean lowHealthWarning
+    ) {
         guiGraphics.fill(x - 2, y - 2, x + barWidth + 2, y + barHeight + 2, 0xEE12141A);
         guiGraphics.fill(x - 1, y - 1, x + barWidth + 1, y + barHeight + 1, 0xFF353945);
         guiGraphics.fill(x, y, x + barWidth, y + barHeight, 0xFF0D0E12);
 
-        // 3. Render Energy Fill Bar
         int fillWidth = (int) (barWidth * ratio);
         if (fillWidth > 0) {
             int primaryColor;
@@ -71,47 +101,33 @@ public class RiderEnergyOverlay {
             int shadowColor;
 
             if (!isTransformed) {
-                primaryColor = 0xFFE0E0E0; // White
-                shineColor   = 0xFFFFFFFF;
-                shadowColor  = 0xFF9E9E9E;
-            } else if (form == 1) { // Growing Form
-                primaryColor = 0xFFFF9800; // Orange
-                shineColor   = 0xFFFFCC80;
-                shadowColor  = 0xFFE65100;
-            } else { // Mighty Form (default)
-                primaryColor = 0xFFE52521; // Crimson Red
-                shineColor   = 0xFFFF6E40;
-                shadowColor  = 0xFF990000;
+                primaryColor = 0xFFE0E0E0;
+                shineColor = 0xFFFFFFFF;
+                shadowColor = 0xFF9E9E9E;
+            } else if (form == 1) {
+                primaryColor = 0xFFFF9800;
+                shineColor = 0xFFFFCC80;
+                shadowColor = 0xFFE65100;
+            } else {
+                primaryColor = 0xFFE52521;
+                shineColor = 0xFFFF6E40;
+                shadowColor = 0xFF990000;
             }
 
-            // Low energy alert pulse (when energy < 20%)
-            if (ratio < 0.20f) {
-                long time = System.currentTimeMillis();
-                if ((time / 250) % 2 == 0) {
-                    primaryColor = 0xFFFF1744; // Flashing hazard red
-                    shineColor   = 0xFFFF8A80;
-                    shadowColor  = 0xFFB71C1C;
-                }
+            if ((ratio < 0.20f || lowHealthWarning) && (System.currentTimeMillis() / 250) % 2 == 0) {
+                primaryColor = 0xFFFF1744;
+                shineColor = 0xFFFF8A80;
+                shadowColor = 0xFFB71C1C;
             }
 
-            // Top highlight line (1px)
             guiGraphics.fill(x, y, x + fillWidth, y + 1, shineColor);
-            // Middle core fill
             guiGraphics.fill(x, y + 1, x + fillWidth, y + barHeight - 1, primaryColor);
-            // Bottom shading line (1px)
             guiGraphics.fill(x, y + barHeight - 1, x + fillWidth, y + barHeight, shadowColor);
         }
 
-        // 4. Subtle Energy Ticks / Dividers (every 25%)
-        for (int i = 1; i <= 3; i++) {
-            int tickX = x + (barWidth * i / 4);
+        for (int i = 1; i < segments; i++) {
+            int tickX = x + (barWidth * i / segments);
             guiGraphics.fill(tickX, y, tickX + 1, y + barHeight, 0x66000000);
         }
-
-        // Keep the percentage inside the group's width, above the icon and bar.
-        String text = String.format("%.0f%%", ratio * 100.0f);
-        int textX = groupX + groupWidth - mc.font.width(text);
-        int textY = iconY - mc.font.lineHeight;
-        guiGraphics.drawString(mc.font, text, textX, textY, 0xFFE0E0E0, true);
     }
 }

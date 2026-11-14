@@ -12,7 +12,22 @@
       },
       "bones": [
         {
+          "name": "body2",
+          "pivot": [0, 24, 0]
+        },
+        {
+          "name": "armorBody",
+          "parent": "body2",
+          "pivot": [0, 24, 0]
+        },
+        {
+          "name": "armorChest",
+          "parent": "armorBody",
+          "pivot": [0, 17, 0]
+        },
+        {
           "name": "kuugabelt",
+          "parent": "armorChest",
           "pivot": [0, 15.4, -2.2]
         },
         {

@@ -1,5 +1,7 @@
 package com.neroferno.krm_onore;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.mojang.logging.LogUtils;
 import com.neroferno.krm_onore.block.ModBlocks;
 import com.neroferno.krm_onore.event.ModSounds;
@@ -28,6 +30,7 @@ public class KRMRevoMod {
 
     public static final String MODID = "krm_revo";
     public static final Logger LOGGER = LogUtils.getLogger();
+    public static final Gson GSON = new GsonBuilder().create();
 
     // Creative tab registry
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
@@ -60,6 +63,12 @@ public class KRMRevoMod {
 
         // Register network packets
         modEventBus.addListener(ModNetwork::register);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.neroferno.krm_onore.combat.RiderFistCombat::onAddReloadListener
+        );
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                com.neroferno.krm_onore.combat.RiderFistCombat::onDatapackSync
+        );
 
 
         modEventBus.addListener(this::commonSetup);

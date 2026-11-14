@@ -21,6 +21,13 @@
   "key.krm_revo.transform":   "Transform",
   "key.krm_revo.ability":     "Use Riderkick",
   "key.krm_revo.skill_tree":  "Open Belt Menu",
+  "key.krm_revo.special3": "Special 3",
+  "key.krm_revo.special1": "Special 1 (press TWICE quickly: double click)",
+  "key.krm_revo.special2": "Special 2",
+  "chat.krm_revo.especial1_no_energy": "Not enough Rider Energy for Special 1! (Requires 25%)",
+  "chat.krm_revo.especial2_no_energy": "Not enough Rider Energy for Special 2! (Requires 20%)",
+  "chat.krm_revo.especial3_no_target": "Special 3 requires a target in sight (max: 14 blocks)!",
+  "chat.krm_revo.especial3_no_energy": "Not enough Rider Energy for Special 3! (Requires 15%)",
 
   "gui.krm_revo.skill_tree.title":       "Arcle Driver",
   "gui.krm_revo.skill_tree.close":       "Close",
@@ -33,6 +40,7 @@
   "chat.krm_revo.no_target_lock": "Riderkick requires a target in sight (max: 20 blocks)!",
   "chat.krm_revo.not_enough_energy": "Not enough Rider Energy for Riderkick! (Requires 30%)",
   "krm_revo.transform.no_energy": "Rider Energy depleted! Rest or recover energy before transforming.",
-  "krm_revo.transform.exhausted": "Your Rider Energy reached 0! You detransformed from exhaustion.",
+  "krm_revo.transform.exhausted": "Your Rider Energy reached 0! You detransformed from exhaustion and are weakened.",
+  "krm_revo.transform.starved": "You went without food for too long! You detransformed.",
   "krm_revo.energy.gauge": "Rider Energy"
 }

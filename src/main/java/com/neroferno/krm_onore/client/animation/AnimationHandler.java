@@ -1,6 +1,7 @@
 package com.neroferno.krm_onore.client.animation;
 
 import com.neroferno.krm_onore.KRMRevoMod;
+import com.neroferno.krm_onore.client.renderer.layer.SuitRenderLayer;
 import com.neroferno.krm_onore.attachment.ModAttachments;
 import dev.kosmx.playerAnim.api.IPlayable;
 import dev.kosmx.playerAnim.api.layered.AnimationStack;
@@ -52,6 +53,10 @@ public class AnimationHandler {
         }
 
         if (playable != null) {
+            if (animName.equals("rider_kick")) {
+                SuitRenderLayer.playGrowingKick(player);
+            }
+
             if (animName.equals("kuuga_transform") || animName.equals("kuuga_transform_fast")) {
                 var stateData = player.getData(ModAttachments.RIDER_STATE);
                 stateData.setTransformAnimationTicks(animName.equals("kuuga_transform_fast")

@@ -24,8 +24,28 @@ import java.util.List;
 public class AbilityHelper {
 
     public static void executeAbility(ServerPlayer player, String abilityId) {
-        // First, check if the player is transformed
-        if (!TransformationHelper.isTransformed(player)) {
+    if ("cancel_especial1".equals(abilityId)) {
+        com.neroferno.krm_onore.combat.Especial1Combat.cancel(player);
+            return;
+    }
+
+    // First, check if the player is transformed
+    if (!TransformationHelper.isTransformed(player)) {
+        return;
+        }
+
+        if ("especial1".equals(abilityId)) {
+            com.neroferno.krm_onore.combat.Especial1Combat.start(player);
+            return;
+        }
+
+        if ("especial2".equals(abilityId)) {
+            com.neroferno.krm_onore.combat.Especial2Combat.start(player);
+            return;
+        }
+
+        if ("especial3".equals(abilityId)) {
+            com.neroferno.krm_onore.combat.Especial3Combat.start(player);
             return;
         }
 
@@ -128,9 +148,13 @@ public class AbilityHelper {
     }
 
     public static LivingEntity findTarget(Player player) {
+        return findTarget(player, 24.0D);
+    }
+
+    /** Igual que findTarget(player) pero con el alcance indicado (el Especial 3 usa 14 bloques). */
+    public static LivingEntity findTarget(Player player, double range) {
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getLookAngle().normalize();
-        double range = 24.0D;
         AABB searchBox = player.getBoundingBox().inflate(range);
         List<LivingEntity> list = player.level().getEntitiesOfClass(LivingEntity.class, searchBox,
                 entity -> entity != player && entity.isAlive() && player.hasLineOfSight(entity));
