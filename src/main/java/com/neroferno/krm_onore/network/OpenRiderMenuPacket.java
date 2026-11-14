@@ -9,7 +9,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 @SuppressWarnings("null")
 public record OpenRiderMenuPacket() implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
     public static final Type<OpenRiderMenuPacket> TYPE = new Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("krm_revo", "open_rider_menu"));
-    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.FriendlyByteBuf, OpenRiderMenuPacket> STREAM_CODEC = 
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.FriendlyByteBuf, OpenRiderMenuPacket> STREAM_CODEC =
             net.minecraft.network.codec.StreamCodec.unit(new OpenRiderMenuPacket());
 
     @Override

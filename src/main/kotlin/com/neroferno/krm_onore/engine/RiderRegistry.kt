@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:package-name")
+
 package com.neroferno.krm_onore.engine
 
 import java.util.concurrent.ConcurrentHashMap
@@ -21,7 +23,10 @@ object RiderRegistry {
     fun getAll(): Collection<RiderSeries> = riders.values
 
     @JvmStatic
-    fun getForm(riderId: String, formId: Int): RiderForm? = riders[riderId]?.getForm(formId)
+    fun getForm(
+        riderId: String,
+        formId: Int,
+    ): RiderForm? = riders[riderId]?.getForm(formId)
 
     @JvmStatic
     fun hasRider(id: String): Boolean = riders.containsKey(id)
@@ -30,7 +35,10 @@ object RiderRegistry {
 /**
  * High-level DSL entrypoint to define and register a Kamen Rider.
  */
-fun rider(id: String, block: RiderBuilder.() -> Unit): RiderSeries {
+fun rider(
+    id: String,
+    block: RiderBuilder.() -> Unit,
+): RiderSeries {
     val builder = RiderBuilder(id)
     builder.block()
     val series = builder.build()

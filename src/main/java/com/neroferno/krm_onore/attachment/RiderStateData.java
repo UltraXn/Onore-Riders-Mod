@@ -1,5 +1,6 @@
 package com.neroferno.krm_onore.attachment;
 
+import com.neroferno.krm_onore.network.TransformationHelper;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.neoforged.neoforge.common.util.INBTSerializable;
@@ -12,14 +13,24 @@ public class RiderStateData implements INBTSerializable<CompoundTag> {
 
     // === Persistent State (Saved to world/player disk) ===
     private boolean transformed = false;
-    private int form = 1; // Default: Growing Form (1)
+    private int form = 2; // Default: Mighty Form (2)
     private long transformStartTick = 0;
     private boolean hasTransformStartTick = false;
     private long lastTransformTime = 0;
+    private transient long transformAnimationStartTick = 0;
+    private transient boolean hasTransformAnimationStartTick = false;
+    private transient int transformAnimationTicks = TransformationHelper.TRANSFORM_ANIMATION_TICKS;
+    // Cliente: true una vez que llegó el primer SyncRiderStatePacket de esta sesión/jugador.
+    // Sirve para distinguir "ya estaba transformado al entrar al mundo" de "se acaba de transformar".
+    private transient boolean receivedInitialSync = false;
+    // Cliente: true una vez reproducido el sonido de kuuga_transform en esta animación.
+    private transient boolean transformSoundPlayed = false;
 
     // === Transient Combat & Animation State (Runtime only, zero disk bloat) ===
     private transient boolean transformPending = false;
     private transient int transformTicksRemaining = 0;
+    private transient double suppressedArmor = 0.0D;
+    private transient double suppressedArmorToughness = 0.0D;
 
     private transient int riderKickState = 0;
     private transient int riderKickTicks = 0;
@@ -66,7 +77,12 @@ public class RiderStateData implements INBTSerializable<CompoundTag> {
     }
 
     public void setForm(int form) {
-        this.form = form;
+        this.form = normalizeForm(form);
+    }
+
+    /** La GUI antigua guardaba Mighty como forma 0; ahora Mighty es la forma 2. */
+    private static int normalizeForm(int form) {
+        return form == 0 ? 2 : form;
     }
 
     public long getTransformStartTick() {
@@ -83,6 +99,48 @@ public class RiderStateData implements INBTSerializable<CompoundTag> {
 
     public void setHasTransformStartTick(boolean val) {
         this.hasTransformStartTick = val;
+    }
+
+    public long getTransformAnimationStartTick() {
+        return transformAnimationStartTick;
+    }
+
+    public void setTransformAnimationStartTick(long tick) {
+        this.transformAnimationStartTick = tick;
+        this.hasTransformAnimationStartTick = true;
+        this.transformSoundPlayed = false;
+    }
+
+    public boolean isTransformSoundPlayed() {
+        return transformSoundPlayed;
+    }
+
+    public void setTransformSoundPlayed(boolean played) {
+        this.transformSoundPlayed = played;
+    }
+
+    public int getTransformAnimationTicks() {
+        return transformAnimationTicks;
+    }
+
+    public void setTransformAnimationTicks(int ticks) {
+        this.transformAnimationTicks = ticks;
+    }
+
+    public boolean hasTransformAnimationStartTick() {
+        return hasTransformAnimationStartTick;
+    }
+
+    public boolean hasReceivedInitialSync() {
+        return receivedInitialSync;
+    }
+
+    public void setReceivedInitialSync(boolean received) {
+        this.receivedInitialSync = received;
+    }
+
+    public void clearTransformAnimationStartTick() {
+        this.hasTransformAnimationStartTick = false;
     }
 
     public long getLastTransformTime() {
@@ -107,6 +165,22 @@ public class RiderStateData implements INBTSerializable<CompoundTag> {
 
     public void setTransformTicksRemaining(int ticks) {
         this.transformTicksRemaining = ticks;
+    }
+
+    public double getSuppressedArmor() {
+        return suppressedArmor;
+    }
+
+    public void setSuppressedArmor(double amount) {
+        this.suppressedArmor = amount;
+    }
+
+    public double getSuppressedArmorToughness() {
+        return suppressedArmorToughness;
+    }
+
+    public void setSuppressedArmorToughness(double amount) {
+        this.suppressedArmorToughness = amount;
     }
 
     // --- Rider Kick Getters / Setters ---
@@ -312,9 +386,9 @@ public class RiderStateData implements INBTSerializable<CompoundTag> {
             this.transformed = nbt.getBoolean("Transformed");
         }
         if (nbt.contains("Form")) {
-            this.form = nbt.getInt("Form");
+            this.form = normalizeForm(nbt.getInt("Form"));
         } else {
-            this.form = 1;
+            this.form = 2;
         }
         if (nbt.contains("TransformStartTick")) {
             this.transformStartTick = nbt.getLong("TransformStartTick");

@@ -38,6 +38,8 @@ public class ClientWeaponRegistryMixin {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
         if (player == null) return;
+        var inventory = player.getInventory();
+        if (!inventory.getSelected().isEmpty() || !inventory.offhand.get(0).isEmpty()) return;
 
         // Check belt
         boolean hasBelt = false;

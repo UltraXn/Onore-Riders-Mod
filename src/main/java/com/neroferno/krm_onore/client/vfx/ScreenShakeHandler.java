@@ -73,4 +73,3 @@ public class ScreenShakeHandler {
         if (intensity < THRESHOLD) intensity = 0f;
     }
 }
-

@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:package-name")
+
 package com.neroferno.krm_onore.engine
 
 import net.minecraft.resources.ResourceLocation
@@ -12,7 +14,7 @@ data class FormStats(
     val armorToughness: Double = 0.0,
     val movementSpeedMultiplier: Double = 1.0,
     val jumpBoostLevel: Int = 0,
-    val resistanceLevel: Int = 0
+    val resistanceLevel: Int = 0,
 )
 
 /**
@@ -25,5 +27,5 @@ data class RiderForm(
     val colorHex: Int = 0xFFFFFF,
     val modelLocation: ResourceLocation? = null,
     val textureLocation: ResourceLocation? = null,
-    val finishers: List<FinisherDefinition> = emptyList()
+    val finishers: List<FinisherDefinition> = emptyList(),
 )

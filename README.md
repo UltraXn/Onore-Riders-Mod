@@ -94,6 +94,42 @@ cd Onore-Riders-Mod
 ./gradlew runClient
 ```
 
+### Datos de los combos Growing
+
+Los ataques se definen en `data/krm_revo/rider_attacks/`, con un JSON por golpe y tipo:
+`punch1_light.json` a `punch3_light.json` para clic izquierdo, y `punch1_heavy.json` a
+`punch3_heavy.json` para clic derecho. `settings.json` contiene `combo_reset_ticks` y
+`animation_blend_ticks`.
+Los datapacks pueden reemplazar estos archivos; los cambios se aplican con `/reload` y se
+sincronizan a los clientes conectados.
+
+Cada ataque acepta estos campos:
+
+| Campo | Descripción |
+| --- | --- |
+| `animation_ticks` | Cooldown antes de permitir el siguiente golpe, en ticks (20 ticks = 1 segundo). |
+| `hitbox_phases` | Lista de fases con ventana activa y geometría de la caja barrida. |
+| `start_tick`, `end_tick` | Inicio y fin de cada fase, en ticks base de la animación. |
+| `width`, `height`, `depth` | Dimensiones de la caja de impacto en bloques. |
+| `start_offset`, `end_offset` | Distancia frontal recorrida por la caja durante la fase, en bloques. |
+| `damage` | Daño aplicado por impacto. |
+| `lunge_start_tick`, `lunge_end_tick` | Inicio y fin del avance, en ticks desde el inicio de la animación. |
+| `lunge_strength` | Fuerza total del avance durante ese intervalo. |
+| `extra_knockback` | Knockback adicional al conectar. |
+| `hit_stop_ticks` | Duración del hit-stop al conectar con un enemigo. |
+| `shake` | Intensidad del temblor cuando conecta el primer enemigo del ataque. |
+| `reaction` | Reacción de la víctima: `none`, `stun`, `knockdown` o `launcher`. |
+| `reaction_ticks` | Duración del estado de interrupción (solo aplica a mobs). |
+| `launch_velocity` | Velocidad vertical mínima del `launcher`; debe ser `0` para otras reacciones. |
+
+Los tiempos base de las fases y del avance se expresan desde el inicio de la animación; el valor de
+`animation_blend_ticks` se suma automáticamente a las fases y al avance, y se aplica también a la mezcla
+visual de GeckoLib. Cada ataque mantiene un conjunto de entidades ya alcanzadas compartido entre todas
+sus fases, para que el barrido pueda golpear a varios enemigos sin repetirlos. Por defecto, los golpes
+1 y 2 aplican stun corto, el golpe 3 ligero derriba y el golpe 3 pesado lanza al enemigo. El stun y el
+derribo interrumpen la IA/ataques de mobs; el launcher conserva el movimiento aéreo. Si falta un archivo
+o sus valores no son válidos, se conservan los valores predeterminados.
+
 ---
 
 ## 🤝 Créditos y Agradecimientos

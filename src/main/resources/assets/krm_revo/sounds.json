@@ -10,5 +10,16 @@
         "stream": false
       }
     ]
+  },
+  "kuuga_transform": {
+    "category": "player",
+    "subtitle": "krm_revo.subtitle.transform",
+    "sounds": [
+      {
+        "name": "krm_revo:kuugamighty",
+        "volume": 1.0,
+        "stream": false
+      }
+    ]
   }
 }

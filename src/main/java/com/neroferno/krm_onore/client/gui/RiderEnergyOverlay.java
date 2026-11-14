@@ -2,13 +2,15 @@ package com.neroferno.krm_onore.client.gui;
 
 import com.neroferno.krm_onore.attachment.ModAttachments;
 import com.neroferno.krm_onore.attachment.RiderEnergyData;
+import com.neroferno.krm_onore.combat.RiderLowHealth;
+import com.neroferno.krm_onore.combat.RiderStarvation;
 import com.neroferno.krm_onore.network.TransformationHelper;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.ItemStackHandler;
+import com.neroferno.krm_onore.KRMRevoMod;
 
 /**
  * Client-side HUD overlay for the Rider Energy (Henshin Gauge) bar.
@@ -16,16 +18,26 @@ import net.neoforged.neoforge.items.ItemStackHandler;
  */
 @SuppressWarnings({"null", "resource"})
 public class RiderEnergyOverlay {
+    private static final ResourceLocation GROWING_ICON =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/hud/growing_icon.png");
+    private static final ResourceLocation MIGHTY_ICON =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "textures/gui/hud/mighty_icon.png");
+
+    /** Poca vida (con histeresis); mismo calculo que el servidor para que el parpadeo coincida con el drenaje. */
+    private static boolean lowHealth;
 
     public static void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
-        if (player == null || mc.options.hideGui) return;
+        if (player == null) return;
+        lowHealth = RiderLowHealth.next(lowHealth, player.getHealth(), player.getMaxHealth());
+        if (mc.options.hideGui) return;
 
         // Only display the overlay if a belt is equipped or the player is currently transformed
         boolean isTransformed = TransformationHelper.isTransformed(player);
         boolean hasBelt = TransformationHelper.isBeltEquipped(player);
         if (!isTransformed && !hasBelt) return;
+        int form = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getForm() : 1;
 
         RiderEnergyData energyData = player.getData(ModAttachments.RIDER_ENERGY);
         float ratio = energyData.getPercentage(); // 0.0f to 1.0f
@@ -33,97 +45,89 @@ public class RiderEnergyOverlay {
         int screenWidth = mc.getWindow().getGuiScaledWidth();
         int screenHeight = mc.getWindow().getGuiScaledHeight();
 
-        // Dimensions of the Rider Energy Bar
-        int barWidth = 120;
+        // Match the 81-pixel width of the vanilla hunger meter, including the form icon.
+        int groupWidth = 81;
         int barHeight = 5;
+        int iconWidth = 13;
+        int iconHeight = 13;
+        int iconGap = 2;
+        int barWidth = groupWidth - iconWidth - iconGap;
+        int groupX = screenWidth / 2 + 10;
+        int iconX = groupX;
+        int x = iconX + iconWidth + iconGap;
+        int hungerBarY = screenHeight - 39;
+        int iconY = hungerBarY - iconHeight - 2;
+        int y = iconY + (iconHeight - barHeight) / 2;
 
-        // Position directly above experience bar:
-        // Vanilla exp bar is at screenHeight - 29 (height 5)
-        int x = (screenWidth - barWidth) / 2;
-        int y = screenHeight - 40;
-
-        // Adjust if player has experience level number rendered
-        if (player.experienceLevel > 0) {
-            y = screenHeight - 44;
+        // 1. Render a form icon only while transformed; forms without a supplied icon stay blank.
+        if (isTransformed && (form == 1 || form == 2)) {
+            ResourceLocation formIcon = form == 1 ? GROWING_ICON : MIGHTY_ICON;
+            guiGraphics.blit(formIcon, iconX, iconY, iconWidth, iconHeight, 0, 0, 34, 32, 34, 32);
         }
 
-        // Driver Icon dimensions and position:
-        int iconSize = 16;
-        int iconX = x - iconSize - 4;
-        int iconY = y - (iconSize - barHeight) / 2;
+        // Aviso: poca vida (se drena energia) o sin muslones de comida (cuenta atras para destransformarse).
+        boolean lowHealthWarning = isTransformed && (lowHealth || RiderStarvation.isStarving(player));
+        renderEnergyBar(guiGraphics, x, y, barWidth, barHeight, ratio, isTransformed, form, 4, lowHealthWarning);
 
-        // Retrieve equipped belt item
-        ItemStack beltStack = ItemStack.EMPTY;
-        if (player.hasData(ModAttachments.RIDER_INVENTORY)) {
-            ItemStackHandler inv = player.getData(ModAttachments.RIDER_INVENTORY);
-            beltStack = inv.getStackInSlot(0);
-        }
+        // Keep the percentage inside the group's width, above the icon and bar.
+        String text = String.format("%.0f%%", ratio * 100.0f);
+        int textX = groupX + groupWidth - mc.font.width(text);
+        int textY = iconY - mc.font.lineHeight;
+        boolean blinkOn = (System.currentTimeMillis() / 250) % 2 == 0;
+        int textColor = lowHealthWarning && blinkOn ? 0xFFFF1744 : 0xFFE0E0E0;
+        guiGraphics.drawString(mc.font, text, textX, textY, textColor, true);
+    }
 
-        // 1. Render Driver Icon or fallback crest
-        if (!beltStack.isEmpty()) {
-            guiGraphics.renderItem(beltStack, iconX, iconY);
-        } else {
-            guiGraphics.fill(iconX + 2, iconY + 2, iconX + 14, iconY + 14, 0xDD202028);
-            guiGraphics.fill(iconX + 4, iconY + 4, iconX + 12, iconY + 12, 0xFFE5B020);
-        }
+    public static void renderEnergyBar(
+            GuiGraphics guiGraphics, int x, int y, int barWidth, int barHeight,
+            float ratio, boolean isTransformed, int form, int segments
+    ) {
+        renderEnergyBar(guiGraphics, x, y, barWidth, barHeight, ratio, isTransformed, form, segments, false);
+    }
 
-        // 2. Render Outer Metallic Frame for Energy Bar
+    /** lowHealthWarning: la barra parpadea en rojo (poca vida: la energia se esta drenando). */
+    public static void renderEnergyBar(
+            GuiGraphics guiGraphics, int x, int y, int barWidth, int barHeight,
+            float ratio, boolean isTransformed, int form, int segments, boolean lowHealthWarning
+    ) {
         guiGraphics.fill(x - 2, y - 2, x + barWidth + 2, y + barHeight + 2, 0xEE12141A);
         guiGraphics.fill(x - 1, y - 1, x + barWidth + 1, y + barHeight + 1, 0xFF353945);
         guiGraphics.fill(x, y, x + barWidth, y + barHeight, 0xFF0D0E12);
 
-        // 3. Render Energy Fill Bar
         int fillWidth = (int) (barWidth * ratio);
         if (fillWidth > 0) {
-            int form = player.hasData(ModAttachments.RIDER_STATE) ? player.getData(ModAttachments.RIDER_STATE).getForm() : 1;
-
             int primaryColor;
             int shineColor;
             int shadowColor;
 
             if (!isTransformed) {
-                primaryColor = 0xFFFFC107; // Tech Gold
-                shineColor   = 0xFFFFE082;
-                shadowColor  = 0xFFB78103;
-            } else if (form == 1) { // Growing Form
-                primaryColor = 0xFFE0E0E0; // Silver White
-                shineColor   = 0xFFFFFFFF;
-                shadowColor  = 0xFF9E9E9E;
-            } else { // Mighty Form (default)
-                primaryColor = 0xFFE52521; // Crimson Red
-                shineColor   = 0xFFFF6E40;
-                shadowColor  = 0xFF990000;
+                primaryColor = 0xFFE0E0E0;
+                shineColor = 0xFFFFFFFF;
+                shadowColor = 0xFF9E9E9E;
+            } else if (form == 1) {
+                primaryColor = 0xFFFF9800;
+                shineColor = 0xFFFFCC80;
+                shadowColor = 0xFFE65100;
+            } else {
+                primaryColor = 0xFFE52521;
+                shineColor = 0xFFFF6E40;
+                shadowColor = 0xFF990000;
             }
 
-            // Low energy alert pulse (when energy < 20%)
-            if (ratio < 0.20f) {
-                long time = System.currentTimeMillis();
-                if ((time / 250) % 2 == 0) {
-                    primaryColor = 0xFFFF1744; // Flashing hazard red
-                    shineColor   = 0xFFFF8A80;
-                    shadowColor  = 0xFFB71C1C;
-                }
+            if ((ratio < 0.20f || lowHealthWarning) && (System.currentTimeMillis() / 250) % 2 == 0) {
+                primaryColor = 0xFFFF1744;
+                shineColor = 0xFFFF8A80;
+                shadowColor = 0xFFB71C1C;
             }
 
-            // Top highlight line (1px)
             guiGraphics.fill(x, y, x + fillWidth, y + 1, shineColor);
-            // Middle core fill
             guiGraphics.fill(x, y + 1, x + fillWidth, y + barHeight - 1, primaryColor);
-            // Bottom shading line (1px)
             guiGraphics.fill(x, y + barHeight - 1, x + fillWidth, y + barHeight, shadowColor);
         }
 
-        // 4. Subtle Energy Ticks / Dividers (every 25%)
-        for (int i = 1; i <= 3; i++) {
-            int tickX = x + (barWidth * i / 4);
+        for (int i = 1; i < segments; i++) {
+            int tickX = x + (barWidth * i / segments);
             guiGraphics.fill(tickX, y, tickX + 1, y + barHeight, 0x66000000);
         }
-
-        // 5. Clean Energy Percentage Text
-        String text = String.format("%.0f%%", ratio * 100.0f);
-        int textX = x + barWidth + 4;
-        int textY = y - 2;
-
-        guiGraphics.drawString(mc.font, text, textX, textY, 0xFFE0E0E0, true);
     }
 }

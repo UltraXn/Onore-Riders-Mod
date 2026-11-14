@@ -41,8 +41,8 @@ public class WeaponRegistryMixin {
         // Only intercept if the original returned null (no combo available)
         if (cir.getReturnValue() != null) return;
 
-        // Player must be holding nothing in main hand
-        if (!player.getMainHandItem().isEmpty()) return;
+        // Rider fists only replace attacks when both hands are empty.
+        if (!player.getMainHandItem().isEmpty() || !player.getOffhandItem().isEmpty()) return;
 
         // Check if the player has a Driver Belt in the Rider Inventory
         boolean hasBelt = false;

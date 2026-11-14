@@ -10,6 +10,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
@@ -29,21 +30,29 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.minecraft.server.level.ServerPlayer;
 import com.neroferno.krm_onore.network.SyncVelocityPacket;
 import com.neroferno.krm_onore.network.TransformVFXPacket;
+import com.neroferno.krm_onore.combat.RiderFistCombat;
+import com.neroferno.krm_onore.combat.RiderLowHealth;
+import com.neroferno.krm_onore.combat.RiderStarvation;
+import com.neroferno.krm_onore.combat.Especial3Combat;
+import com.neroferno.krm_onore.combat.Especial1Combat;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * Handles KRM-modified combat behavior.
  *
  * While transformed and attacking with an EMPTY hand:
- *   - Growing Form deals 2.0 damage; other forms deal 12.0
- *   - Growing Form grants 15 armor points while active
- *   - Knockback is increased
+ *   - Growing Form: 5 damage, +10 armor, +1 toughness, extra knockback
+ *   - Mighty Form:  7 damage, +15 armor, +4 toughness, +15% movement speed, no fire / extra knockback
+ *   - Other forms:  12 damage, fire and extra knockback
  *
  *
  * Future phases will add:
@@ -53,9 +62,47 @@ import java.util.List;
 @EventBusSubscriber(modid = KRMRevoMod.MODID)
 public class CombatEventHandler {
 
-    private static final ResourceLocation GROWING_FORM_ARMOR_ID =
-            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "growing_form_armor");
-    private static final double GROWING_FORM_ARMOR_BONUS = 15.0D;
+    // Modificadores transitorios (no se guardan en disco) que dependen de la forma activa.
+    private static final ResourceLocation FORM_ARMOR_ID =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "form_armor");
+    private static final ResourceLocation FORM_TOUGHNESS_ID =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "form_toughness");
+    private static final ResourceLocation FORM_SPEED_ID =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "form_speed");
+    private static final double GROWING_ARMOR = 10.0D;
+    private static final double GROWING_TOUGHNESS = 1.0D;
+    private static final double MIGHTY_ARMOR = 15.0D;
+    private static final double MIGHTY_TOUGHNESS = 4.0D;
+    // +15% sobre la velocidad base (ADD_MULTIPLIED_BASE). Sube o baja este valor a gusto.
+    private static final double MIGHTY_SPEED_BONUS = 0.15D;
+    private static final double GROWING_PUNCH_LUNGE = 0.12D;
+    private static final long RIDER_REGEN_DELAY_TICKS = 60L;
+    private static final long RIDER_REGEN_INTERVAL_TICKS = 40L;
+    private static final float RIDER_REGEN_HEAL_AMOUNT = 2.0F;
+    /** Debilidad al destransformarte por quedarte sin energia (ticks): 10 s. */
+    private static final int EXHAUSTION_WEAKNESS_TICKS = 200;
+    /** Energia que drena el vacio por tick (~1.7 s para vaciar la barra entera). */
+    private static final float VOID_ENERGY_DRAIN_PER_TICK = 3.0F;
+    /** Ticks seguidos que cada Rider transformado lleva sin muslones de comida. */
+    private static final Map<Player, Integer> STARVING_TICKS = new WeakHashMap<>();
+    private static final java.util.Set<Player> LOW_HEALTH =
+            java.util.Collections.newSetFromMap(new WeakHashMap<>());
+    private static final Map<Player, Long> LAST_DAMAGE_TICKS = new WeakHashMap<>();
+    private static final Map<Player, Long> NEXT_REGEN_TICKS = new WeakHashMap<>();
+    private static final ResourceLocation TRANSFORMED_ARMOR_SUPPRESSION_ID =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "transformed_armor_suppression");
+    private static final ResourceLocation TRANSFORMED_TOUGHNESS_SUPPRESSION_ID =
+            ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "transformed_toughness_suppression");
+
+    @SubscribeEvent
+    public static void onGrowingFistAttack(LivingIncomingDamageEvent event) {
+        if (!(event.getSource().getEntity() instanceof ServerPlayer attacker)
+                || !RiderFistCombat.shouldCancelImmediateGrowingHit(attacker)) {
+            return;
+        }
+
+        event.setCanceled(true);
+    }
 
     @SubscribeEvent
     public static void onLivingDamage(LivingDamageEvent.Pre event) {
@@ -67,27 +114,34 @@ public class CombatEventHandler {
         // Player must be transformed
         if (!TransformationHelper.isTransformed(attacker)) return;
 
-        // Attack must be unarmed (empty main hand)
-        if (!attacker.getMainHandItem().isEmpty()) return;
+        // Rider punch effects only apply when both hands are empty.
+        if (!attacker.getMainHandItem().isEmpty() || !attacker.getOffhandItem().isEmpty()) return;
 
-        // Transformed unarmed melee strike: gain +5.0f Rider Energy
-        RiderEnergyData attackerEnergy = attacker.getData(ModAttachments.RIDER_ENERGY);
-        attackerEnergy.gain(5.0f);
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(
-                attacker,
-                new SyncRiderEnergyPacket(attacker.getId(), attackerEnergy.getEnergy(), attackerEnergy.getMaxEnergy())
-        );
+        // Los impactos del Especial 1 no generan energia; los golpes normales siguen otorgandola.
+        if (!(attacker instanceof ServerPlayer serverAttacker) || !Especial1Combat.isActive(serverAttacker)) {
+            RiderEnergyData attackerEnergy = attacker.getData(ModAttachments.RIDER_ENERGY);
+            attackerEnergy.gain(5.0f);
+            syncRiderEnergy(attacker, attackerEnergy);
+        }
 
         int form = attacker.hasData(ModAttachments.RIDER_STATE) ? attacker.getData(ModAttachments.RIDER_STATE).getForm() : 1;
-        float damage = form == 1 ? 2.0f : 12.0f; // Growing = 2.0, other forms = 12.0
+        float damage = RiderFistCombat.isResolvingCustomImpact(attacker.getUUID())
+                ? (float) RiderFistCombat.resolvingDamage(attacker.getUUID())
+                : form == 1 ? 5.0f : form == 2 ? 7.0f : 12.0f;
         event.setNewDamage(damage);
 
         LivingEntity victim = event.getEntity();
-        if (form == 1) { // Growing Form (Blanco)
-            Vec3 look = attacker.getLookAngle().normalize();
-            victim.push(look.x * 0.25D, 0.05D, look.z * 0.25D);
+        if (form == 1 || form == 2) {
+            victim.knockback(RiderFistCombat.extraKnockback(attacker.getUUID()), attacker.getX() - victim.getX(), attacker.getZ() - victim.getZ());
             victim.hurtMarked = true;
-        } else { // Mighty Form (Rojo)
+            if (form == 2) {
+                // Mighty Form (Rojo)
+                attacker.level().playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                        net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_IMPACT,
+                        net.minecraft.sounds.SoundSource.PLAYERS, 0.8f, 1.8f);
+            }
+        } else {
+            // Otras formas
             victim.setRemainingFireTicks(40); // Set on fire for 2 seconds
             Vec3 look = attacker.getLookAngle().normalize();
             victim.push(look.x * 0.6D, 0.1D, look.z * 0.6D);
@@ -106,20 +160,141 @@ public class CombatEventHandler {
             victim.getName().getString()
         );
 
-        Vec3 hitPos = victim.position().add(0, victim.getBbHeight() / 2.0, 0);
-        Vec3 look = attacker.getViewVector(1.0f);
+    }
+
+    @SubscribeEvent
+    public static void onTransformedUnarmedImpact(LivingDamageEvent.Post event) {
+        if (!(event.getSource().getEntity() instanceof Player attacker)
+                || attacker.level().isClientSide
+                || !TransformationHelper.isTransformed(attacker)
+                || !attacker.getMainHandItem().isEmpty()
+                || !attacker.getOffhandItem().isEmpty()) {
+            return;
+        }
+
+        // Growing: sonido y chispas ya los envia RiderFistCombat en el frame de impacto (golpee o falle).
+        if (attacker.hasData(ModAttachments.RIDER_STATE)
+                && RiderFistCombat.usesFistSystem(attacker.getData(ModAttachments.RIDER_STATE).getForm())
+                && TransformationHelper.isBeltEquipped(attacker)) {
+            return;
+        }
+
+        LivingEntity victim = event.getEntity();
+        Vec3 hitPos = victim.position().add(0.0D, victim.getBbHeight() / 2.0D, 0.0D);
+        Vec3 look = attacker.getViewVector(1.0F);
+        if (attacker.hasData(ModAttachments.RIDER_STATE)
+                && RiderFistCombat.usesFistSystem(attacker.getData(ModAttachments.RIDER_STATE).getForm())
+                && TransformationHelper.isBeltEquipped(attacker)) {
+            attacker.level().playSound(
+                    null,
+                    victim.getX(),
+                    victim.getY(),
+                    victim.getZ(),
+                    net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.get(
+                            ResourceLocation.fromNamespaceAndPath("bettercombat", "fist_punch")
+                    ),
+                    net.minecraft.sounds.SoundSource.PLAYERS,
+                    0.8F,
+                    1.1F
+            );
+        }
         PacketDistributor.sendToPlayersTrackingEntityAndSelf(
                 attacker,
                 new ImpactVFXPacket(hitPos.x, hitPos.y, hitPos.z, look.x, look.y, look.z)
         );
     }
 
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onTransformedPlayerDamage(LivingDamageEvent.Pre event) {
+        if (!(event.getEntity() instanceof Player victim)
+                || victim.level().isClientSide
+                || !TransformationHelper.isTransformed(victim)
+                || !TransformationHelper.isBeltEquipped(victim)) {
+            return;
+        }
+
+        // Vacio y /kill (ignoran la invulnerabilidad): ni la barra ni el traje te salvan. El vacio ademas drena
+        // la energia rapido (ver drainEnergyInVoid).
+        if (event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            return;
+        }
+
+        float incomingDamage = event.getNewDamage();
+        if (incomingDamage <= 0.0F) {
+            return;
+        }
+
+        RiderEnergyData energy = victim.getData(ModAttachments.RIDER_ENERGY);
+        float remainingDamage = incomingDamage;
+        if (energy.getEnergy() > 0.0F) {
+            float absorbedDamage = Math.min(incomingDamage * 0.5F, energy.getEnergy());
+            remainingDamage = incomingDamage - absorbedDamage;
+            energy.setEnergy(energy.getEnergy() - absorbedDamage);
+            syncRiderEnergy(victim, energy);
+        }
+
+        if (energy.getEnergy() <= 0.0F) {
+            event.setNewDamage(0.0F);
+            detransformFromExhaustion(victim);
+            return;
+        }
+
+        event.setNewDamage(remainingDamage);
+    }
+
+    @SubscribeEvent
+    public static void onGrowingPunchHit(LivingDamageEvent.Post event) {
+        if (!(event.getSource().getEntity() instanceof Player attacker)
+                || !(attacker instanceof ServerPlayer serverPlayer)
+                || attacker.level().isClientSide
+                || !TransformationHelper.isTransformed(attacker)
+                || !attacker.hasData(ModAttachments.RIDER_STATE)
+                || !RiderFistCombat.usesFistSystem(attacker.getData(ModAttachments.RIDER_STATE).getForm())
+                || !attacker.getMainHandItem().isEmpty()
+                || !attacker.getOffhandItem().isEmpty()) {
+            return;
+        }
+
+        if (RiderFistCombat.hasActiveLunge(serverPlayer)) {
+            return;
+        }
+
+        Vec3 look = attacker.getLookAngle();
+        Vec3 horizontalLook = new Vec3(look.x, 0.0D, look.z);
+        if (horizontalLook.lengthSqr() < 1.0E-6D) {
+            return;
+        }
+
+        Vec3 lunge = horizontalLook.normalize().scale(GROWING_PUNCH_LUNGE);
+        attacker.setDeltaMovement(attacker.getDeltaMovement().add(lunge));
+        attacker.hurtMarked = true;
+    }
+
+    @SubscribeEvent
+    public static void onPlayerDamaged(LivingDamageEvent.Post event) {
+        if (!(event.getEntity() instanceof Player player) || player.level().isClientSide) {
+            return;
+        }
+
+        long gameTime = player.level().getGameTime();
+        LAST_DAMAGE_TICKS.put(player, gameTime);
+        NEXT_REGEN_TICKS.put(player, gameTime + RIDER_REGEN_DELAY_TICKS);
+    }
+
     @SubscribeEvent
     public static void onLivingFall(LivingFallEvent event) {
         if (event.getEntity() instanceof Player player) {
-            if (player.hasData(ModAttachments.RIDER_STATE) && player.getData(ModAttachments.RIDER_STATE).isRiderKickFallImmunity()) {
+            if (!player.hasData(ModAttachments.RIDER_STATE)) {
+                return;
+            }
+
+            RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
+            if (stateData.isRiderKickFallImmunity()) {
                 event.setDistance(0.0f);
                 event.setCanceled(true);
+            } else if (TransformationHelper.isTransformed(player)) {
+                float fallThreshold = stateData.getForm() == 1 ? 4.0f : 6.0f;
+                event.setDistance(Math.max(0.0f, event.getDistance() - (fallThreshold - 3.0f)));
             }
         }
     }
@@ -129,7 +304,12 @@ public class CombatEventHandler {
         if (event.getEntity().level().isClientSide) return;
 
         Player player = event.getEntity();
+        updateGrowingFormArmor(player);
         RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
+        tickRiderRegeneration(player);
+        updateRiderLowHealth(player);
+        tickRiderStarvation(player);
+        drainEnergyInVoid(player);
 
         if (stateData.isTransformPending()) {
             if (!player.isAlive() || !TransformationHelper.isBeltEquipped(player)) {
@@ -143,6 +323,7 @@ public class CombatEventHandler {
                     com.neroferno.krm_onore.network.ModNetwork.completeTransformation(serverPlayer);
                 }
             }
+
         }
 
         int state = stateData.getRiderKickState();
@@ -408,23 +589,23 @@ public class CombatEventHandler {
         if (player.tickCount % 20 == 0) {
             boolean isTransformed = TransformationHelper.isTransformed(player);
             RiderEnergyData energy = player.getData(ModAttachments.RIDER_ENERGY);
+            boolean special3Active = player instanceof ServerPlayer serverPlayer
+                    && Especial3Combat.isActive(serverPlayer);
 
             if (isTransformed) {
                 // If transformed and energy <= 0, automatically detransform!
                 if (energy.getEnergy() <= 0.0f) {
-                    TransformationHelper.setTransformed(player, false);
-                    player.displayClientMessage(
-                            Component.translatable("krm_revo.transform.exhausted")
-                                    .withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
-                            true
-                    );
-                    boolean hasBelt = TransformationHelper.isBeltEquipped(player);
-                    int form = stateData.getForm();
-
-                    PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
-                            new SyncRiderStatePacket(player.getId(), false, hasBelt, 0, form));
-                    PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
-                            new TransformVFXPacket(player.getX(), player.getY(), player.getZ(), false));
+                    if (!special3Active) {
+                        detransformFromExhaustion(player);
+                    }
+                } else if (LOW_HEALTH.contains(player)) {
+                    // Poca vida: la energia se drena lentamente (ademas de lo que gastan los golpes) hasta que
+                    // recuperes la mitad de la vida.
+                    energy.setEnergy(energy.getEnergy() - RiderLowHealth.ENERGY_DRAIN_PER_SECOND);
+                    syncRiderEnergy(player, energy);
+                    if (energy.getEnergy() <= 0.0f && !special3Active) {
+                        detransformFromExhaustion(player);
+                    }
                 }
             } else {
                 // Untransformed passive regeneration (+1.0f per second up to max)
@@ -434,6 +615,123 @@ public class CombatEventHandler {
                             new SyncRiderEnergyPacket(player.getId(), energy.getEnergy(), energy.getMaxEnergy()));
                 }
             }
+        }
+    }
+
+    /**
+     * Sin muslones de comida (barra de comida en 0) durante 3 segundos seguidos: la barra de energia parpadea
+     * (ver RiderEnergyOverlay) y al cumplirse el tiempo te destransformas.
+     */
+    private static void tickRiderStarvation(Player player) {
+        if (!player.isAlive()
+                || !TransformationHelper.isTransformed(player)
+                || !RiderStarvation.isStarving(player)) {
+            STARVING_TICKS.remove(player);
+            return;
+        }
+
+        int ticks = STARVING_TICKS.merge(player, 1, Integer::sum);
+        if (ticks >= RiderStarvation.STARVE_TICKS) {
+            STARVING_TICKS.remove(player);
+            detransform(player, "krm_revo.transform.starved");
+        }
+    }
+
+    private static void updateRiderLowHealth(Player player) {
+        boolean low = RiderLowHealth.next(LOW_HEALTH.contains(player), player.getHealth(), player.getMaxHealth());
+        if (low) {
+            LOW_HEALTH.add(player);
+        } else {
+            LOW_HEALTH.remove(player);
+        }
+    }
+
+    /** Caer al vacio (bajo el fondo del mundo) vacia la energia muy rapido; al llegar a 0 te destransformas. */
+    private static void drainEnergyInVoid(Player player) {
+        if (!player.isAlive()
+                || !TransformationHelper.isTransformed(player)
+                || player.getY() >= player.level().getMinBuildHeight()) {
+            return;
+        }
+
+        RiderEnergyData energy = player.getData(ModAttachments.RIDER_ENERGY);
+        energy.setEnergy(energy.getEnergy() - VOID_ENERGY_DRAIN_PER_TICK);
+        syncRiderEnergy(player, energy);
+        if (energy.getEnergy() <= 0.0F) {
+            detransformFromExhaustion(player);
+        }
+    }
+
+    private static void syncRiderEnergy(Player player, RiderEnergyData energy) {
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(
+                player,
+                new SyncRiderEnergyPacket(player.getId(), energy.getEnergy(), energy.getMaxEnergy())
+        );
+    }
+
+    /** Energia a 0: te destransformas y quedas con debilidad. */
+    private static void detransformFromExhaustion(Player player) {
+        if (!TransformationHelper.isTransformed(player)) {
+            return;
+        }
+
+        detransform(player, "krm_revo.transform.exhausted");
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.WEAKNESS, EXHAUSTION_WEAKNESS_TICKS, 0));
+    }
+
+    private static void detransform(Player player, String messageKey) {
+        if (!TransformationHelper.isTransformed(player)) {
+            return;
+        }
+
+        TransformationHelper.setTransformed(player, false);
+        player.displayClientMessage(
+                Component.translatable(messageKey)
+                        .withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
+                true
+        );
+        boolean hasBelt = TransformationHelper.isBeltEquipped(player);
+        int form = player.getData(ModAttachments.RIDER_STATE).getForm();
+
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(
+                player,
+                new SyncRiderStatePacket(player.getId(), false, hasBelt, 0, form)
+        );
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(
+                player,
+                new TransformVFXPacket(player.getX(), player.getY(), player.getZ(), false)
+        );
+    }
+
+    private static void tickRiderRegeneration(Player player) {
+        if (!player.isAlive()
+                || !TransformationHelper.isTransformed(player)
+                || !TransformationHelper.isBeltEquipped(player)
+                // Sin muslones de comida no hay regeneracion automatica.
+                || RiderStarvation.isStarving(player)) {
+            return;
+        }
+
+        long gameTime = player.level().getGameTime();
+        Long lastDamageTick = LAST_DAMAGE_TICKS.get(player);
+        if (lastDamageTick == null) {
+            LAST_DAMAGE_TICKS.put(player, gameTime);
+            NEXT_REGEN_TICKS.put(player, gameTime + RIDER_REGEN_DELAY_TICKS);
+            return;
+        }
+
+        if (gameTime - lastDamageTick < RIDER_REGEN_DELAY_TICKS) {
+            return;
+        }
+
+        long nextRegenTick = NEXT_REGEN_TICKS.getOrDefault(
+                player,
+                lastDamageTick + RIDER_REGEN_DELAY_TICKS
+        );
+        if (gameTime >= nextRegenTick) {
+            player.heal(RIDER_REGEN_HEAL_AMOUNT);
+            NEXT_REGEN_TICKS.put(player, gameTime + RIDER_REGEN_INTERVAL_TICKS);
         }
     }
 
@@ -476,25 +774,90 @@ public class CombatEventHandler {
         updateGrowingFormArmor(player);
     }
 
+    /**
+     * Aplica los bonos de la forma activa: armadura y dureza (Growing y Mighty) y velocidad (Mighty).
+     * Se mantiene el nombre original porque lo llaman TransformationHelper y otros handlers.
+     */
     public static void updateGrowingFormArmor(Player player) {
         AttributeInstance armor = player.getAttribute(Attributes.ARMOR);
-        if (armor == null) return;
+        AttributeInstance toughness = player.getAttribute(Attributes.ARMOR_TOUGHNESS);
+        if (armor == null || toughness == null || !player.hasData(ModAttachments.RIDER_STATE)) return;
+        RiderStateData stateData = player.getData(ModAttachments.RIDER_STATE);
 
-        boolean shouldHaveBonus = TransformationHelper.isTransformed(player)
-                && TransformationHelper.isBeltEquipped(player)
-                && player.hasData(ModAttachments.RIDER_STATE)
-                && player.getData(ModAttachments.RIDER_STATE).getForm() == 1;
-        boolean hasBonus = armor.hasModifier(GROWING_FORM_ARMOR_ID);
+        boolean active = TransformationHelper.isTransformed(player) && TransformationHelper.isBeltEquipped(player);
+        int form = stateData.getForm();
+        double armorBonus = !active ? 0.0D : form == 1 ? GROWING_ARMOR : form == 2 ? MIGHTY_ARMOR : 0.0D;
+        double toughnessBonus = !active ? 0.0D : form == 1 ? GROWING_TOUGHNESS : form == 2 ? MIGHTY_TOUGHNESS : 0.0D;
+        double speedBonus = active && form == 2 ? MIGHTY_SPEED_BONUS : 0.0D;
 
-        if (shouldHaveBonus && !hasBonus) {
-            armor.addTransientModifier(new AttributeModifier(
-                    GROWING_FORM_ARMOR_ID,
-                    GROWING_FORM_ARMOR_BONUS,
+        setFormModifier(armor, FORM_ARMOR_ID, armorBonus, AttributeModifier.Operation.ADD_VALUE);
+        setFormModifier(toughness, FORM_TOUGHNESS_ID, toughnessBonus, AttributeModifier.Operation.ADD_VALUE);
+        AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speed != null) {
+            setFormModifier(speed, FORM_SPEED_ID, speedBonus, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+        }
+
+        boolean transformed = TransformationHelper.isTransformed(player);
+        double growingBonus = armorBonus;
+        double armorWithoutSuppression = armor.getValue() + stateData.getSuppressedArmor();
+        double armorToSuppress = transformed
+                ? Math.max(0.0D, armorWithoutSuppression - growingBonus)
+                : 0.0D;
+        updateArmorSuppression(
+                armor,
+                TRANSFORMED_ARMOR_SUPPRESSION_ID,
+                stateData.getSuppressedArmor(),
+                armorToSuppress,
+                stateData::setSuppressedArmor
+        );
+
+        double toughnessWithoutSuppression = toughness.getValue() + stateData.getSuppressedArmorToughness();
+        double growingToughnessBonus = toughnessBonus;
+        double toughnessToSuppress = transformed
+                ? Math.max(0.0D, toughnessWithoutSuppression - growingToughnessBonus)
+                : 0.0D;
+        updateArmorSuppression(
+                toughness,
+                TRANSFORMED_TOUGHNESS_SUPPRESSION_ID,
+                stateData.getSuppressedArmorToughness(),
+                toughnessToSuppress,
+                stateData::setSuppressedArmorToughness
+        );
+    }
+
+    /** Deja el modificador con exactamente {@code amount} (o lo quita si es 0), recreandolo si cambio la forma. */
+    private static void setFormModifier(AttributeInstance attribute, ResourceLocation id, double amount,
+                                        AttributeModifier.Operation operation) {
+        AttributeModifier existing = attribute.getModifier(id);
+        if (amount <= 0.0D) {
+            if (existing != null) attribute.removeModifier(id);
+            return;
+        }
+        if (existing != null) {
+            if (existing.amount() == amount && existing.operation() == operation) return;
+            attribute.removeModifier(id);
+        }
+        attribute.addTransientModifier(new AttributeModifier(id, amount, operation));
+    }
+
+    private static void updateArmorSuppression(
+            AttributeInstance attribute,
+            ResourceLocation modifierId,
+            double previousSuppression,
+            double suppression,
+            java.util.function.DoubleConsumer updateStoredSuppression
+    ) {
+        if (Math.abs(suppression - previousSuppression) < 0.001D) return;
+
+        attribute.removeModifier(modifierId);
+        if (suppression > 0.0D) {
+            attribute.addTransientModifier(new AttributeModifier(
+                    modifierId,
+                    -suppression,
                     AttributeModifier.Operation.ADD_VALUE
             ));
-        } else if (!shouldHaveBonus && hasBonus) {
-            armor.removeModifier(GROWING_FORM_ARMOR_ID);
         }
+        updateStoredSuppression.accept(suppression);
     }
 
     public static void releaseTarget(Player player) {

@@ -6,10 +6,15 @@
   "refmap": "krm_revo.refmap.json",
   "mixins": [
     "WeaponRegistryMixin",
-    "WeaponRegistryAccessor"
+    "WeaponRegistryAccessor",
+    "RiderFistCooldownMixin",
+    "InventoryPickupMixin",
+    "LivingEntityJumpMixin",
+    "PlayerPoseMixin"
   ],
   "client": [
     "client.ClientWeaponRegistryMixin",
+    "client.GrowingSuitPunchAnimationMixin",
     "client.HumanoidArmorLayerMixin",
     "client.CapeLayerMixin",
     "client.ElytraLayerMixin",

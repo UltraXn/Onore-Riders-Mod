@@ -21,6 +21,13 @@
   "key.krm_revo.transform": "Transformarse",
   "key.krm_revo.ability": "Usar Riderkick",
   "key.krm_revo.skill_tree": "Abrir Menú de Cinturón",
+  "key.krm_revo.special3": "Especial 3",
+  "key.krm_revo.special1": "Especial 1 (pulsar DOS VECES rápido: doble clic)",
+  "key.krm_revo.special2": "Especial 2",
+  "chat.krm_revo.especial1_no_energy": "¡No tienes suficiente Energía Rider para el Especial 1! (Requiere 25%)",
+  "chat.krm_revo.especial2_no_energy": "¡No tienes suficiente Energía Rider para el Especial 2! (Requiere 20%)",
+  "chat.krm_revo.especial3_no_target": "¡Especial 3 requiere un objetivo en la mira (máx. 14 bloques)!",
+  "chat.krm_revo.especial3_no_energy": "¡No tienes suficiente Energía Rider para el Especial 3! (Requiere 15%)",
 
   "gui.krm_revo.skill_tree.title":       "Arcle Driver",
   "gui.krm_revo.skill_tree.close":       "Cerrar",
@@ -33,6 +40,7 @@
   "chat.krm_revo.no_target_lock": "¡Riderkick requiere un objetivo en la mira (máx. 20 bloques)!",
   "chat.krm_revo.not_enough_energy": "¡No tienes suficiente Energía Rider para Riderkick! (Requiere 30%)",
   "krm_revo.transform.no_energy": "¡Energía Rider agotada! Descansa o recupera energía para transformarte.",
-  "krm_revo.transform.exhausted": "¡Tu Energía Rider llegó a 0! Te has destransformado por agotamiento.",
+  "krm_revo.transform.exhausted": "¡Tu Energía Rider llegó a 0! Te has destransformado por agotamiento y quedas debilitado.",
+  "krm_revo.transform.starved": "¡Pasaste demasiado tiempo sin comida! Te has destransformado.",
   "krm_revo.energy.gauge": "Energía Rider"
 }

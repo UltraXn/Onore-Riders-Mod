@@ -1,0 +1,16 @@
+{
+  "animation_ticks": 12,
+  "hitbox_phases": [
+    {"start_tick": 6, "end_tick": 9, "width": 0.9, "height": 1.2, "depth": 1.0, "start_offset": 0.35, "end_offset": 2.2}
+  ],
+  "damage": 5.0,
+  "lunge_start_tick": 1.28,
+  "lunge_end_tick": 9.28,
+  "lunge_strength": 0.21,
+  "extra_knockback": 0.1,
+  "hit_stop_ticks": 2,
+  "shake": 0.35,
+  "reaction": "none",
+  "reaction_ticks": 0,
+  "launch_velocity": 0.0
+}

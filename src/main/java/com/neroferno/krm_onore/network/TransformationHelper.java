@@ -17,7 +17,13 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 @SuppressWarnings("null")
 public class TransformationHelper {
 
-    public static final int TRANSFORM_ANIMATION_TICKS = 90;
+    public static final int TRANSFORM_ANIMATION_TICKS = 93; // pose final de kuuga_transform (4.625 s * 20 = 92.5)
+    public static final int TRANSFORM_ANIMATION_FAST_TICKS = 28; // 1.375 s * 20, rounded up
+
+    // Sonido del henshin (kuugamighty.ogg): arranca en 0.5 s de kuuga_transform y dura 8.341 s.
+    // El revelado del traje se estira para terminar justo cuando acaba el sonido.
+    public static final int TRANSFORM_SOUND_START_TICKS = 10; // 0.5 s * 20
+    public static final int TRANSFORM_SOUND_TICKS = 127;      // 8.341 s * 20, redondeado hacia arriba
 
     public static String getActiveRiderId(Player player) {
         if (isBeltEquipped(player)) {
