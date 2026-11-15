@@ -16,7 +16,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 @SuppressWarnings({"null", "resource"})
 public record SyncRiderStatePacket(int entityId, boolean isTransformed, boolean hasBelt, int riderKickState, int form) implements CustomPacketPayload {
 
-    public static final CustomPacketPayload.Type<SyncRiderStatePacket> TYPE = 
+    public static final CustomPacketPayload.Type<SyncRiderStatePacket> TYPE =
         new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(KRMRevoMod.MODID, "sync_rider_state"));
 
     public static final StreamCodec<ByteBuf, SyncRiderStatePacket> STREAM_CODEC = StreamCodec.composite(

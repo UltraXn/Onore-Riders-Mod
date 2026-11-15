@@ -29,7 +29,7 @@ public class RiderMenu extends AbstractContainerMenu {
         super(ModMenuTypes.RIDER_MENU.get(), pContainerId);
         this.player = inv.player;
         this.riderInv = player.getData(ModAttachments.RIDER_INVENTORY);
-        
+
         PlayerArmorInvWrapper armorInv = new PlayerArmorInvWrapper(inv);
         PlayerOffhandInvWrapper offhandInv = new PlayerOffhandInvWrapper(inv);
 

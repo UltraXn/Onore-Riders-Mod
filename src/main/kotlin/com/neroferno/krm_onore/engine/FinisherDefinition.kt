@@ -10,7 +10,7 @@ enum class FinisherType {
     RIDER_KICK,
     RIDER_PUNCH,
     WEAPON_SLASH,
-    SPECIAL_SHOT
+    SPECIAL_SHOT,
 }
 
 /**
@@ -24,5 +24,5 @@ data class FinisherDefinition(
     val causesExplosion: Boolean = true,
     val explosionRadius: Float = 2.5f,
     val voiceSound: SoundEvent? = null,
-    val impactSound: SoundEvent? = null
+    val impactSound: SoundEvent? = null,
 )

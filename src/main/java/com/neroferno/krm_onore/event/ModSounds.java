@@ -28,4 +28,3 @@ public class ModSounds {
         SOUND_EVENTS.register(eventBus);
     }
 }
-

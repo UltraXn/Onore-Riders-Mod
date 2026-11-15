@@ -13,7 +13,7 @@ data class RiderSeries(
     val era: RiderEra,
     val driverSupplier: Supplier<out Item>?,
     val forms: Map<Int, RiderForm>,
-    val defaultFormId: Int
+    val defaultFormId: Int,
 ) {
     fun getForm(id: Int): RiderForm? = forms[id]
 }
@@ -33,9 +33,7 @@ class RiderBuilder(val id: String) {
         forms.putAll(scope.forms)
     }
 
-    fun build(): RiderSeries {
-        return RiderSeries(id, era, driverSupplier, forms, defaultFormId)
-    }
+    fun build(): RiderSeries = RiderSeries(id, era, driverSupplier, forms, defaultFormId)
 }
 
 class FormsScope {
@@ -62,7 +60,7 @@ class FormBuilder(val id: Int, val nameKey: String) {
         toughness: Double = 0.0,
         speed: Double = 1.0,
         jump: Int = 0,
-        resistance: Int = 0
+        resistance: Int = 0,
     ) {
         this.stats = FormStats(hp, atk, def, toughness, speed, jump, resistance)
     }
@@ -75,7 +73,7 @@ class FormBuilder(val id: Int, val nameKey: String) {
         explosion: Boolean = true,
         explosionRadius: Float = 2.5f,
         voice: SoundEvent? = null,
-        impact: SoundEvent? = null
+        impact: SoundEvent? = null,
     ) {
         finishers.add(
             FinisherDefinition(
@@ -86,12 +84,10 @@ class FormBuilder(val id: Int, val nameKey: String) {
                 causesExplosion = explosion,
                 explosionRadius = explosionRadius,
                 voiceSound = voice,
-                impactSound = impact
-            )
+                impactSound = impact,
+            ),
         )
     }
 
-    fun build(): RiderForm {
-        return RiderForm(id, nameKey, stats, colorHex, modelLocation, textureLocation, finishers)
-    }
+    fun build(): RiderForm = RiderForm(id, nameKey, stats, colorHex, modelLocation, textureLocation, finishers)
 }

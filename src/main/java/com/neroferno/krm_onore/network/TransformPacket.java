@@ -26,4 +26,3 @@ public record TransformPacket() implements CustomPacketPayload {
         return TYPE;
     }
 }
-

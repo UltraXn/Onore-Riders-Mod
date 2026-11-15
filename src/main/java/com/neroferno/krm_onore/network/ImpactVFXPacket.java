@@ -44,4 +44,3 @@ public record ImpactVFXPacket(double posX, double posY, double posZ, double dirX
         });
     }
 }
-

@@ -22,14 +22,14 @@ public class VillagerTradeHandler {
     @SuppressWarnings("null")
     public static void onVillagerTrades(VillagerTradesEvent event) {
         if (event.getType() == ModVillagers.KRM_RESEARCHER.get()) {
-            
+
             // Level 1: Novice
             List<VillagerTrades.ItemListing> level1 = event.getTrades().get(1);
             level1.add(new BasicItemListing(
                     new ItemStack(Items.PAPER, 24),
                     new ItemStack(Items.EMERALD, 1),
                     16, 2, 0.05f));
-            
+
             level1.add(new BasicItemListing(
                     new ItemStack(Items.EMERALD, 1),
                     new ItemStack(Items.GLASS_BOTTLE, 4),
@@ -41,7 +41,7 @@ public class VillagerTradeHandler {
                     new ItemStack(Items.BOOK, 4),
                     new ItemStack(Items.EMERALD, 1),
                     12, 10, 0.05f));
-            
+
             // Placeholder for Special Research Map (just an Empty Map for now)
             level2.add(new BasicItemListing(
                     new ItemStack(Items.EMERALD, 13),

@@ -292,4 +292,3 @@ public class RiderScreen extends AbstractContainerScreen<RiderMenu> {
         }
     }
 }
-

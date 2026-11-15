@@ -25,7 +25,7 @@ object Kuuga {
                     atk = 6.0,
                     def = 10.0,
                     toughness = 2.0,
-                    speed = 1.05
+                    speed = 1.05,
                 )
                 colorHex = 0xE0E0E0
             }
@@ -37,7 +37,7 @@ object Kuuga {
                     atk = 12.0,
                     def = 15.0,
                     toughness = 4.0,
-                    speed = 1.20
+                    speed = 1.20,
                 )
                 colorHex = 0xCC1111
 
@@ -48,7 +48,7 @@ object Kuuga {
                     damage = 25.0f,
                     explosion = true,
                     explosionRadius = 3.0f,
-                    impact = ModSounds.TRANSFORM.get()
+                    impact = ModSounds.TRANSFORM.get(),
                 )
             }
 
@@ -60,7 +60,7 @@ object Kuuga {
                     def = 12.0,
                     toughness = 2.0,
                     speed = 1.45,
-                    jump = 2
+                    jump = 2,
                 )
                 colorHex = 0x1144CC
             }
@@ -72,7 +72,7 @@ object Kuuga {
                     atk = 7.0,
                     def = 10.0,
                     toughness = 1.0,
-                    speed = 1.10
+                    speed = 1.10,
                 )
                 colorHex = 0x11AA44
             }
@@ -85,7 +85,7 @@ object Kuuga {
                     def = 28.0,
                     toughness = 8.0,
                     speed = 0.85,
-                    resistance = 1
+                    resistance = 1,
                 )
                 colorHex = 0x771199
             }
@@ -97,7 +97,7 @@ object Kuuga {
                     atk = 24.0,
                     def = 22.0,
                     toughness = 6.0,
-                    speed = 1.30
+                    speed = 1.30,
                 )
                 colorHex = 0x222222
 
@@ -107,7 +107,7 @@ object Kuuga {
                     animation = "krm_revo:kick",
                     damage = 40.0f,
                     explosion = true,
-                    explosionRadius = 4.5f
+                    explosionRadius = 4.5f,
                 )
             }
 
@@ -120,7 +120,7 @@ object Kuuga {
                     toughness = 12.0,
                     speed = 1.50,
                     jump = 3,
-                    resistance = 2
+                    resistance = 2,
                 )
                 colorHex = 0x050505
 
@@ -130,7 +130,7 @@ object Kuuga {
                     animation = "krm_revo:kick",
                     damage = 65.0f,
                     explosion = true,
-                    explosionRadius = 6.0f
+                    explosionRadius = 6.0f,
                 )
             }
         }
